@@ -1,0 +1,1 @@
+The testing team created a file on a CRISIL laptop and downloaded the Wi-Fi File Transfer app on their personal mobile device. They then moved to the parking lot (outside the corporate network) to use the mobile hotspot, connected the laptop to it, accessed the file transfer app from the laptop browser, and successfully transferred files from the laptop to the mobile device.
