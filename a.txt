@@ -17,17 +17,20 @@ def get_access_token(client_id, client_secret, tenant_id):
     response.raise_for_status()
     return response.json().get('access_token')
 
-def fetch_emails_with_cve(access_token):
-    """Fetch emails containing the keyword CVE."""
+def fetch_emails_with_cve(access_token, user_id):
+    """Fetch emails containing the keyword CVE for a specific user."""
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json'
     }
-    url = "https://graph.microsoft.com/v1.0/me/messages"
+    url = f"https://graph.microsoft.com/v1.0/users/{user_id}/messages"
     response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    emails = response.json().get('value', [])
 
+    if response.status_code != 200:
+        print(f"Error {response.status_code}: {response.text}")
+        response.raise_for_status()
+
+    emails = response.json().get('value', [])
     cve_emails = []
     for email in emails:
         subject = email.get('subject', '')
@@ -64,11 +67,14 @@ def main():
     CLIENT_SECRET = "your_client_secret"
     TENANT_ID = "your_tenant_id"
 
+    # Email ID of the user whose mailbox you want to monitor
+    USER_ID = "user@example.com"  # Replace with the actual email address
+
     while True:
         try:
             print(f"Checking emails at {datetime.now()}...")
             access_token = get_access_token(CLIENT_ID, CLIENT_SECRET, TENANT_ID)
-            cve_emails = fetch_emails_with_cve(access_token)
+            cve_emails = fetch_emails_with_cve(access_token, USER_ID)
 
             if cve_emails:
                 save_emails(cve_emails)
