@@ -1,11 +1,84 @@
-import pikepdf
+import time
+import os
+import re
+import requests
+from datetime import datetime
 
-input_pdf_path = "output_presentation.pdf"
-output_pdf_path = "protected_output.pdf"
-password = "your_password"
+def get_access_token(client_id, client_secret, tenant_id):
+    """Get access token for Microsoft Graph API."""
+    url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+    data = {
+        'grant_type': 'client_credentials',
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'scope': 'https://graph.microsoft.com/.default'
+    }
+    response = requests.post(url, data=data)
+    response.raise_for_status()
+    return response.json().get('access_token')
 
-# Open the existing PDF and add password protection
-with pikepdf.open(input_pdf_path) as pdf:
-    pdf.save(output_pdf_path, encryption=pikepdf.Encryption(user=password, owner=password, R=4))
+def fetch_emails_with_cve(access_token):
+    """Fetch emails containing the keyword CVE."""
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json'
+    }
+    url = "https://graph.microsoft.com/v1.0/me/messages"
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    emails = response.json().get('value', [])
 
-print("PDF protected and saved as", output_pdf_path)
+    cve_emails = []
+    for email in emails:
+        subject = email.get('subject', '')
+        body_preview = email.get('bodyPreview', '')
+        full_body = subject + body_preview
+        matches = re.findall(r'CVE-\d{4}-\d{4,7}', full_body)
+        if matches:
+            cve_emails.append((email, matches))
+
+    return cve_emails
+
+def save_emails(emails_with_cve):
+    """Save emails containing CVE keywords to text files."""
+    if not os.path.exists("cve_emails"):
+        os.makedirs("cve_emails")
+
+    for email, cve_matches in emails_with_cve:
+        email_id = email.get('id', 'unknown')
+        subject = email.get('subject', 'No Subject')
+        received_date = email.get('receivedDateTime', 'No Date')
+
+        filename = f"cve_emails/{email_id}.txt"
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(f"Subject: {subject}\n")
+            f.write(f"Received Date: {received_date}\n")
+            f.write(f"CVE Matches: {', '.join(cve_matches)}\n")
+            f.write(f"\nFull Content:\n{email.get('bodyPreview', '')}\n")
+
+        print(f"Saved email with CVE: {filename}")
+
+def main():
+    # Replace with your Azure AD app credentials
+    CLIENT_ID = "your_client_id"
+    CLIENT_SECRET = "your_client_secret"
+    TENANT_ID = "your_tenant_id"
+
+    while True:
+        try:
+            print(f"Checking emails at {datetime.now()}...")
+            access_token = get_access_token(CLIENT_ID, CLIENT_SECRET, TENANT_ID)
+            cve_emails = fetch_emails_with_cve(access_token)
+
+            if cve_emails:
+                save_emails(cve_emails)
+            else:
+                print("No emails with CVE found.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+        print("Waiting for 5 minutes...")
+        time.sleep(300)  # Wait for 5 minutes
+
+if __name__ == "__main__":
+    main()
