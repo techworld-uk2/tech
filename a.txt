@@ -19,14 +19,11 @@ else:
             file_path = os.path.join(today_path, file_name)
             try:
                 # Read the Excel file
-                df = pd.read_excel(file_path)
+                df = pd.read_excel(file_path, usecols=[0])  # Read only Column A (0-indexed)
 
                 # Count non-empty values in Column A
-                if 'A' in df.columns:
-                    count = df['A'].count()
-                else:
-                    count = 0
+                count = df.iloc[:, 0].count()
 
-                print(f"File: {file_name} | Count in Column A: {count}")
+                print(f"File: {file_name} | Count in Column A:A: {count}")
             except Exception as e:
                 print(f"Failed to process file: {file_name}. Error: {str(e)}")
