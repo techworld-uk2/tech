@@ -1,29 +1,26 @@
-import os
-import pandas as pd
-from datetime import datetime
+from docx import Document
 
-# Define the shared path and today's folder name
-share_path = "\\Mumchfn\tech"
-today_folder = datetime.now().strftime("%d-%m-%Y")
-today_path = os.path.join(share_path, today_folder)
+# Load passwords from the text file
+def load_passwords(txt_file):
+    with open(txt_file, "r", encoding="utf-8") as f:
+        return [line.strip() for line in f.readlines()]
 
-# Check if today's folder exists
-if not os.path.exists(today_path):
-    print(f"Folder for today ({today_folder}) does not exist at {share_path}.")
-else:
-    print(f"Checking files in folder: {today_path}\n")
+# Extract text from Word document
+def extract_text_from_docx(docx_file):
+    doc = Document(docx_file)
+    return "\n".join([para.text for para in doc.paragraphs])
 
-    # Iterate through Excel files in the folder
-    for file_name in os.listdir(today_path):
-        if file_name.endswith(".xlsx"):
-            file_path = os.path.join(today_path, file_name)
-            try:
-                # Read the Excel file
-                df = pd.read_excel(file_path, usecols=[0])  # Read only Column A (0-indexed)
+# Check if passwords exist in the Word file
+def check_passwords(txt_file, docx_file):
+    passwords = load_passwords(txt_file)
+    doc_text = extract_text_from_docx(docx_file)
+    
+    found_passwords = [pwd for pwd in passwords if pwd in doc_text]
+    
+    if found_passwords:
+        print("Passwords found in document:", found_passwords)
+    else:
+        print("No passwords found in the document.")
 
-                # Count non-empty values in Column A
-                count = df.iloc[:, 0].count()
-
-                print(f"File: {file_name} | Count in Column A:A: {count}")
-            except Exception as e:
-                print(f"Failed to process file: {file_name}. Error: {str(e)}")
+# Example usage
+check_passwords("passwords.txt", "document.docx")
