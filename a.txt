@@ -10,13 +10,14 @@ def move_files_based_on_excel(excel_file, base_path, report_path):
     allowed_extensions = {".pdf", ".doc", ".docx", ".ppt", ".pptx"}
 
     for index, row in df.iterrows():
-        original_dir = os.path.join(base_path, str(row['A']))  
+        # Construct the original directory path inside base_path with 'allControlDoc'
+        original_dir = os.path.join(base_path, str(row['A']), "allControlDoc")
         new_dir = os.path.join(original_dir, str(row['B']))  
         report_dir = os.path.join(report_path, str(row['B']))  # Folder inside C://vtm/report/
 
         if os.path.exists(original_dir) and os.path.isdir(original_dir):
             try:
-                os.makedirs(new_dir, exist_ok=True)  # Create the new directory
+                os.makedirs(new_dir, exist_ok=True)  # Create new directory inside allControlDoc
                 os.makedirs(report_dir, exist_ok=True)  # Create directory inside C://vtm/report/
 
                 print(f"Created directory: {new_dir}")
@@ -31,13 +32,13 @@ def move_files_based_on_excel(excel_file, base_path, report_path):
                 print(f"Moved selected files from {original_dir} to {report_dir}")
 
             except Exception as e:
-                print(f"Error creating directory {new_dir} or moving files: {e}")
+                print(f"Error creating directory or moving files: {e}")
         else:
             print(f"Directory does not exist: {original_dir}")
 
 # Example usage
 excel_file = "data.xlsx"  
-base_path = "C:\\your_base_directory"  
+base_path = "C:\\your_base_directory"  # Update with your actual base path
 report_path = "C:\\vtm\\report"  # Destination for selected files
 
 move_files_based_on_excel(excel_file, base_path, report_path)
