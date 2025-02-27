@@ -2,18 +2,20 @@ import pandas as pd
 
 # Load the input text file
 with open("input.txt", "r") as file:
-    input_values = set(line.strip() for line in file.readlines())
+    input_values = {line.strip() for line in file if line.strip()}  # Removing empty lines
 
 # Load the CSV file
 csv_file = "your_csv_file.csv"  # Update with your file name
 
 df = pd.read_csv(csv_file, header=12)  # Set header row as row 13 (0-based index 12)
 
+# Ensure column names are stripped of extra spaces
+df.columns = df.columns.str.strip()
+
 # Iterate over rows
 for index, row in df.iterrows():
-    control_reference = row['Control References']  # Column I in Excel is now 'Control References'
-    if pd.notna(control_reference):
-        df.at[index, 'Script Status'] = "Passed" if str(control_reference).strip() in input_values else "Failed"
+    control_reference = str(row.get('Control References', '')).strip()  # Handle missing column safely
+    df.at[index, 'Script Status'] = "Passed" if control_reference in input_values else "Failed"
 
 # Save the updated CSV file
 df.to_csv(csv_file, index=False)
