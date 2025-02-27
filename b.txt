@@ -1,9 +1,9 @@
 import pandas as pd
 import re
 
-# Load the input text file and compile regex patterns
+# Load the input text file
 with open("input.txt", "r") as file:
-    input_patterns = [re.compile(line.strip()) for line in file if line.strip()]
+    input_patterns = [line.strip() for line in file if line.strip()]  # Read values as plain text
 
 # Load the CSV file
 csv_file = "your_csv_file.csv"  # Update with your file name
@@ -13,8 +13,8 @@ df = pd.read_csv(csv_file, header=12)  # Set header row as row 13 (0-based index
 for index, row in df.iterrows():
     control_reference = str(row['Control References']).strip()  # Ensure it's a string
     if pd.notna(control_reference):
-        # Check if the control reference matches any regex pattern
-        match_found = any(pattern.search(control_reference) for pattern in input_patterns)
+        # Check if the control reference exactly matches any entry in input_patterns
+        match_found = any(re.search(rf"\b{re.escape(pattern)}\b", control_reference) for pattern in input_patterns)
         df.at[index, 'Script Status'] = "Passed" if match_found else "Failed"
 
 # Save the updated CSV file
