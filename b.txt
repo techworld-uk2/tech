@@ -1,28 +1,21 @@
 import pandas as pd
-from openpyxl import load_workbook
 
 # Load the input text file
 with open("input.txt", "r") as file:
     input_values = set(line.strip() for line in file.readlines())
 
-# Load the Excel file
-excel_file = "your_excel_file.xlsx"  # Update with your file name
-sheet_name = "Sheet1"  # Update if needed
+# Load the CSV file
+csv_file = "your_csv_file.csv"  # Update with your file name
 
-df = pd.read_excel(excel_file, sheet_name=sheet_name, engine='openpyxl')
-
-# Load the workbook and sheet
-wb = load_workbook(excel_file)
-ws = wb[sheet_name]
+df = pd.read_csv(csv_file)
 
 # Iterate over rows starting from row 13
-for row in range(13, ws.max_row + 1):
-    control_reference = ws[f'I{row}'].value  # Get value from column I
-    if control_reference is not None:
-        ws[f'W{row}'] = "Passed" if str(control_reference).strip() in input_values else "Failed"
+for index, row in df.iloc[12:].iterrows():  # Row 13 in 0-based index is 12
+    control_reference = row['Control References']  # Column I in Excel is now 'Control References'
+    if pd.notna(control_reference):
+        df.at[index, 'Script Status'] = "Passed" if str(control_reference).strip() in input_values else "Failed"
 
-# Save the updated Excel file
-wb.save(excel_file)
-wb.close()
+# Save the updated CSV file
+df.to_csv(csv_file, index=False)
 
 print("Script Status updated successfully.")
