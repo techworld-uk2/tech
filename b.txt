@@ -1,21 +1,21 @@
 import pandas as pd
+import re
 
-# Load the input text file
+# Load the input text file and compile regex patterns
 with open("input.txt", "r") as file:
-    input_values = {line.strip() for line in file if line.strip()}  # Removing empty lines
+    input_patterns = [re.compile(line.strip()) for line in file if line.strip()]
 
 # Load the CSV file
 csv_file = "your_csv_file.csv"  # Update with your file name
-
 df = pd.read_csv(csv_file, header=12)  # Set header row as row 13 (0-based index 12)
-
-# Ensure column names are stripped of extra spaces
-df.columns = df.columns.str.strip()
 
 # Iterate over rows
 for index, row in df.iterrows():
-    control_reference = str(row.get('Control References', '')).strip()  # Handle missing column safely
-    df.at[index, 'Script Status'] = "Passed" if control_reference in input_values else "Failed"
+    control_reference = str(row['Control References']).strip()  # Ensure it's a string
+    if pd.notna(control_reference):
+        # Check if the control reference matches any regex pattern
+        match_found = any(pattern.search(control_reference) for pattern in input_patterns)
+        df.at[index, 'Script Status'] = "Passed" if match_found else "Failed"
 
 # Save the updated CSV file
 df.to_csv(csv_file, index=False)
