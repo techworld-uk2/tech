@@ -7,10 +7,10 @@ with open("input.txt", "r") as file:
 # Load the CSV file
 csv_file = "your_csv_file.csv"  # Update with your file name
 
-df = pd.read_csv(csv_file)
+df = pd.read_csv(csv_file, header=12)  # Set header row as row 13 (0-based index 12)
 
-# Iterate over rows starting from row 13
-for index, row in df.iloc[12:].iterrows():  # Row 13 in 0-based index is 12
+# Iterate over rows
+for index, row in df.iterrows():
     control_reference = row['Control References']  # Column I in Excel is now 'Control References'
     if pd.notna(control_reference):
         df.at[index, 'Script Status'] = "Passed" if str(control_reference).strip() in input_values else "Failed"
