@@ -1,63 +1,16 @@
-import ipaddress
 
-def expand_ip_ranges(ip_range_str):
-    ip_list = []
-    # Remove newlines and spaces
-    ip_range_str = ip_range_str.replace("\n", "").replace(" ", "")
-    # Split input by commas
-    parts = ip_range_str.split(",")
-    
-    for part in parts:
-        # Skip empty parts
-        if not part:
-            continue
-        
-        if "-" in part:
-            try:
-                start_ip, end_ip = part.split("-")
-            except ValueError:
-                print(f"Invalid range format: {part}")
-                continue
+Discussion Points & Key Takeaways
 
-            # If the end part does not include a dot, assume it's just the last octet.
-            if "." not in end_ip:
-                base_octets = start_ip.split(".")
-                if len(base_octets) == 4:
-                    end_ip = ".".join(base_octets[:-1] + [end_ip])
-                else:
-                    print(f"Unexpected format in range: {part}")
-                    continue
-            
-            try:
-                start = ipaddress.IPv4Address(start_ip)
-                end = ipaddress.IPv4Address(end_ip)
-            except ipaddress.AddressValueError:
-                print(f"Invalid IP in range: {part}")
-                continue
+1. Network Segmentation 
+	•	The team discussed implementing network segmentation to ensure clear demarcation between different network zones.
+	•	Limiting access to specific users based on network segmentation.
+	•	Discussion on WiFi Pentesting Apporoch.
 
-            # Expand the range
-            while start <= end:
-                ip_list.append(str(start))
-                start += 1
-        else:
-            # Process single IPs
-            try:
-                ip = ipaddress.IPv4Address(part)
-                ip_list.append(str(ip))
-            except ipaddress.AddressValueError:
-                print(f"Invalid IP: {part}")
-                continue
+2. DB Assessment
+	•	Scripts & Pre-Requisite will shared by KPMG for database configurations review.
 
-    return ip_list
+3. AD Pentesting Cloud Security
+	•	Purple software will be installed in Rehans Machine
 
-def main():
-    # Prompt the user for IP ranges
-    ip_range_input = input("Enter IP ranges separated by commas:\n")
-    expanded_ips = expand_ip_ranges(ip_range_input)
-    
-    print("\nExpanded IP addresses:")
-    for ip in expanded_ips:
-        print(ip)
-
-if _name_ == "_main_":
-    main()
+4. Ratings Middleware Endpoints Scans
+	•	650 endpoints were in scope, scanning has been initated parallel.
