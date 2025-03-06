@@ -1,22 +1,63 @@
-import pandas as pd
-import re
+import ipaddress
 
-# Load the input text file
-with open("input.txt", "r") as file:
-    input_text = file.read()  # Read entire content of the file
+def expand_ip_ranges(ip_range_str):
+    ip_list = []
+    # Remove newlines and spaces
+    ip_range_str = ip_range_str.replace("\n", "").replace(" ", "")
+    # Split input by commas
+    parts = ip_range_str.split(",")
+    
+    for part in parts:
+        # Skip empty parts
+        if not part:
+            continue
+        
+        if "-" in part:
+            try:
+                start_ip, end_ip = part.split("-")
+            except ValueError:
+                print(f"Invalid range format: {part}")
+                continue
 
-# Load the CSV file
-csv_file = "your_csv_file.csv"  # Update with your file name
-df = pd.read_csv(csv_file, header=12)  # Set header row as row 13 (0-based index 12)
+            # If the end part does not include a dot, assume it's just the last octet.
+            if "." not in end_ip:
+                base_octets = start_ip.split(".")
+                if len(base_octets) == 4:
+                    end_ip = ".".join(base_octets[:-1] + [end_ip])
+                else:
+                    print(f"Unexpected format in range: {part}")
+                    continue
+            
+            try:
+                start = ipaddress.IPv4Address(start_ip)
+                end = ipaddress.IPv4Address(end_ip)
+            except ipaddress.AddressValueError:
+                print(f"Invalid IP in range: {part}")
+                continue
 
-# Iterate over rows
-for index, row in df.iterrows():
-    control_reference = str(row['Control References']).strip()  # Ensure it's a string
-    if pd.notna(control_reference):
-        # Check if the control reference appears anywhere in input_text
-        df.at[index, 'Script Status'] = "Passed" if re.search(rf"\b{re.escape(control_reference)}\b", input_text) else "Failed"
+            # Expand the range
+            while start <= end:
+                ip_list.append(str(start))
+                start += 1
+        else:
+            # Process single IPs
+            try:
+                ip = ipaddress.IPv4Address(part)
+                ip_list.append(str(ip))
+            except ipaddress.AddressValueError:
+                print(f"Invalid IP: {part}")
+                continue
 
-# Save the updated CSV file
-df.to_csv(csv_file, index=False)
+    return ip_list
 
-print("Script Status updated successfully.")
+def main():
+    # Prompt the user for IP ranges
+    ip_range_input = input("Enter IP ranges separated by commas:\n")
+    expanded_ips = expand_ip_ranges(ip_range_input)
+    
+    print("\nExpanded IP addresses:")
+    for ip in expanded_ips:
+        print(ip)
+
+if _name_ == "_main_":
+    main()
