@@ -1,44 +1,54 @@
-import os
-import shutil
+import streamlit as st
 import pandas as pd
+import time
+from pathlib import Path
 
-def move_files_based_on_excel(excel_file, base_path, report_path):
-    df = pd.read_excel(excel_file)
-    df.columns = df.columns.str.strip()  # Remove spaces in column names
+# --- Config ---
+EXCEL_FILE = "data.xlsx"  # Change this to your Excel file name
+SHEET_NAME = "Sheet1"     # Change if your sheet has a custom name
+REFRESH_SEC = 5           # Refresh every 5 seconds
 
-    # Define allowed file extensions
-    allowed_extensions = {".pdf", ".doc", ".docx", ".ppt", ".pptx"}
+# --- Page settings ---
+st.set_page_config(page_title="Real-Time Excel Dashboard", layout="wide")
 
-    for index, row in df.iterrows():
-        # Construct the original directory path inside base_path with 'allControlDoc'
-        original_dir = os.path.join(base_path, str(row['A']), "allControlDoc")
-        new_dir = os.path.join(original_dir, str(row['B']))  
-        report_dir = os.path.join(report_path, str(row['B']))  # Folder inside C://vtm/report/
+st.title("📊 Real-Time Excel Dashboard")
 
-        if os.path.exists(original_dir) and os.path.isdir(original_dir):
-            try:
-                os.makedirs(new_dir, exist_ok=True)  # Create new directory inside allControlDoc
-                os.makedirs(report_dir, exist_ok=True)  # Create directory inside C://vtm/report/
+# --- Main loop ---
+def load_data():
+    df = pd.read_excel(EXCEL_FILE, sheet_name=SHEET_NAME, engine="openpyxl")
+    df = df.fillna("")
+    return df
 
-                print(f"Created directory: {new_dir}")
-                print(f"Created directory: {report_dir}")
+# --- App logic ---
+def render_dashboard(df):
+    col1, col2 = st.columns(2)
 
-                # Move only PDF, Word, and PPT files
-                for file_name in os.listdir(original_dir):
-                    file_path = os.path.join(original_dir, file_name)
-                    if os.path.isfile(file_path) and os.path.splitext(file_name)[1].lower() in allowed_extensions:
-                        shutil.move(file_path, os.path.join(report_dir, file_name))
+    with col1:
+        st.subheader("🔍 IP Severity Distribution")
+        ip_severity = df.groupby(['C', 'H']).size().reset_index(name='Count')
+        ip_severity.columns = ['IP Address', 'Severity', 'Count']
+        st.dataframe(ip_severity)
+        st.bar_chart(ip_severity.pivot(index='IP Address', columns='Severity', values='Count').fillna(0))
 
-                print(f"Moved selected files from {original_dir} to {report_dir}")
+    with col2:
+        st.subheader("📌 Status Overview")
+        status_dist = df['AH'].value_counts().reset_index()
+        status_dist.columns = ['Status', 'Count']
+        st.dataframe(status_dist)
+        st.bar_chart(status_dist.set_index('Status'))
 
-            except Exception as e:
-                print(f"Error creating directory or moving files: {e}")
-        else:
-            print(f"Directory does not exist: {original_dir}")
+    st.subheader("📄 Raw Data Preview")
+    st.dataframe(df)
 
-# Example usage
-excel_file = "data.xlsx"  
-base_path = "C:\\your_base_directory"  # Update with your actual base path
-report_path = "C:\\vtm\\report"  # Destination for selected files
+# --- Streamlit app loop ---
+last_modified = None
 
-move_files_based_on_excel(excel_file, base_path, report_path)
+while True:
+    file = Path(EXCEL_FILE)
+    if file.exists():
+        current_modified = file.stat().st_mtime
+        if last_modified is None or current_modified != last_modified:
+            df = load_data()
+            render_dashboard(df)
+            last_modified = current_modified
+    time.sleep(REFRESH_SEC)
