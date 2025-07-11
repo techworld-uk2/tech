@@ -1,54 +1,40 @@
-import streamlit as st
-import pandas as pd
-import time
-from pathlib import Path
+@echo off
+setlocal enabledelayedexpansion
 
-# --- Config ---
-EXCEL_FILE = "data.xlsx"  # Change this to your Excel file name
-SHEET_NAME = "Sheet1"     # Change if your sheet has a custom name
-REFRESH_SEC = 5           # Refresh every 5 seconds
+set TARGET_FILE=targets.txt
+set OUTPUT_DIR=nmap_bulk_results
 
-# --- Page settings ---
-st.set_page_config(page_title="Real-Time Excel Dashboard", layout="wide")
+:: Create output directory if it doesn't exist
+if not exist %OUTPUT_DIR% mkdir %OUTPUT_DIR%
 
-st.title("📊 Real-Time Excel Dashboard")
+:: Define ports and their NSE scripts (format: port|script)
+set PORTS[0]=22|ssh2-enum-algos,ssh-hostkey,ssh-auth-methods
+set PORTS[1]=113|auth
+set PORTS[2]=179|bgp-info
+set PORTS[3]=443|ssl-enum-ciphers,ssl-cert,ssl-dh-params
+set PORTS[4]=2000|cisco-sccp-info
+set PORTS[5]=5060|sip-methods,sip-enum-users,sip-options
 
-# --- Main loop ---
-def load_data():
-    df = pd.read_excel(EXCEL_FILE, sheet_name=SHEET_NAME, engine="openpyxl")
-    df = df.fillna("")
-    return df
+:loop
+echo === Starting scan at %time% on %date% ===
 
-# --- App logic ---
-def render_dashboard(df):
-    col1, col2 = st.columns(2)
+for /f %%I in (%TARGET_FILE%) do (
+    echo [*] Scanning target: %%I
 
-    with col1:
-        st.subheader("🔍 IP Severity Distribution")
-        ip_severity = df.groupby(['C', 'H']).size().reset_index(name='Count')
-        ip_severity.columns = ['IP Address', 'Severity', 'Count']
-        st.dataframe(ip_severity)
-        st.bar_chart(ip_severity.pivot(index='IP Address', columns='Severity', values='Count').fillna(0))
+    for /l %%P in (0,1,5) do (
+        for /f "tokens=1,2 delims=|" %%A in ("!PORTS[%%P]!") do (
+            set PORT=%%A
+            set SCRIPTS=%%B
 
-    with col2:
-        st.subheader("📌 Status Overview")
-        status_dist = df['AH'].value_counts().reset_index()
-        status_dist.columns = ['Status', 'Count']
-        st.dataframe(status_dist)
-        st.bar_chart(status_dist.set_index('Status'))
+            if "!PORT!"=="5060" (
+                nmap -sU -p !PORT! --script=!SCRIPTS! -Pn %%I -oN %OUTPUT_DIR%\%%I_port_!PORT!_udp.txt
+            ) else (
+                nmap -p !PORT! --script=!SCRIPTS! -Pn %%I -oN %OUTPUT_DIR%\%%I_port_!PORT!.txt
+            )
+        )
+    )
+)
 
-    st.subheader("📄 Raw Data Preview")
-    st.dataframe(df)
-
-# --- Streamlit app loop ---
-last_modified = None
-
-while True:
-    file = Path(EXCEL_FILE)
-    if file.exists():
-        current_modified = file.stat().st_mtime
-        if last_modified is None or current_modified != last_modified:
-            df = load_data()
-            render_dashboard(df)
-            last_modified = current_modified
-    time.sleep(REFRESH_SEC)
+echo [*] Scan cycle completed at %time%. Sleeping for 5 minutes...
+timeout /t 300 >nul
+goto loop
