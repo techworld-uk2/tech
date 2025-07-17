@@ -91,4 +91,16 @@ def main():
             return
             
         for ip in ips:
-            ssh_stat, acc_stat = check_windows_account_status(ip, LOGIN_
+            ssh_stat, acc_stat = check_windows_account_status(ip, LOGIN_USERNAME, LOGIN_PASSWORD, USER_TO_CHECK)
+            # Print the formatted table row
+            print(f"| {ip:<15} | {ssh_stat:<21} | {acc_stat:<21} |")
+        
+        print("\nProcessing complete.")
+
+    except FileNotFoundError:
+        print(f"\nError: The file '{IP_FILE}' was not found.")
+    except Exception as e:
+        print(f"\nAn unexpected error occurred: {e}")
+
+if __name__ == "__main__":
+    main()
