@@ -1,1 +1,84 @@
-nmap -sS -sV -p22,113,179,443,2000,5060 --script=default,vuln --script-timeout=60s <target>
+import paramiko
+import socket
+
+def check_ssh_and_account_status(ip, username, password):
+    """
+    Attempts to SSH into a given IP and checks the user account status.
+
+    Args:
+        ip (str): The IP address of the target machine.
+        username (str): The username for SSH login.
+        password (str): The password for the user.
+
+    Returns:
+        tuple: A tuple containing SSH status and Account status.
+    """
+    ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    ssh_status = ""
+    account_status = "N/A"
+
+    try:
+        # Attempt to connect with a timeout
+        ssh_client.connect(hostname=ip, username=username, password=password, timeout=10)
+        ssh_status = "Login Successful"
+
+        # Command to check if the account is locked.
+        # This command works on many Debian/Ubuntu/CentOS systems.
+        # 'L' in the second field of the output indicates a locked account.
+        command = f"passwd -S {username}"
+        stdin, stdout, stderr = ssh_client.exec_command(command)
+        
+        output = stdout.read().decode().strip()
+        error = stderr.read().decode().strip()
+
+        if error:
+            account_status = f"Check Error: {error}"
+        elif " L " in output.split()[1]:
+            account_status = "Locked"
+        else:
+            account_status = "Active"
+
+    except paramiko.AuthenticationException:
+        ssh_status = "Authentication Failed"
+    except socket.timeout:
+        ssh_status = "Connection Timed Out"
+    except paramiko.SSHException as e:
+        ssh_status = f"SSH Error: {e}"
+    except Exception as e:
+        ssh_status = f"Error: {e}"
+    finally:
+        ssh_client.close()
+
+    return ssh_status, account_status
+
+def main():
+    """
+    Main function to read IPs, check status, and print the results table.
+    """
+    # --- IMPORTANT ---
+    # Avoid hardcoding credentials in production code.
+    # Use SSH keys or a secure vault instead.
+    USERNAME = "your_username"
+    PASSWORD = "your_password"
+    IP_FILE = "ips.txt"
+
+    # Print Markdown table header
+    print("| IP Address      | SSH Credential Status | Account Status      |")
+    print("|-----------------|-----------------------|---------------------|")
+
+    try:
+        with open(IP_FILE, 'r') as file:
+            for ip in file:
+                ip = ip.strip()
+                if ip:
+                    ssh_stat, acc_stat = check_ssh_and_account_status(ip, USERNAME, PASSWORD)
+                    print(f"| {ip:<15} | {ssh_stat:<21} | {acc_stat:<19} |")
+    except FileNotFoundError:
+        print(f"Error: The file '{IP_FILE}' was not found.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+if __name__ == "__main__":
+    main()
