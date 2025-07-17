@@ -1,14 +1,16 @@
 import paramiko
 import socket
+import re
 
-def check_ssh_and_account_status(ip, username, password):
+def check_windows_account_status(ip, login_username, login_password, user_to_check):
     """
-    Attempts to SSH into a given IP and checks the user account status.
+    Attempts to SSH into a given Windows IP and checks a domain user's account status.
 
     Args:
-        ip (str): The IP address of the target machine.
-        username (str): The username for SSH login.
-        password (str): The password for the user.
+        ip (str): The IP address of the target Windows machine.
+        login_username (str): The username for SSH login.
+        login_password (str): The password for the SSH login user.
+        user_to_check (str): The domain username whose status needs to be checked.
 
     Returns:
         tuple: A tuple containing SSH status and Account status.
@@ -20,25 +22,32 @@ def check_ssh_and_account_status(ip, username, password):
     account_status = "N/A"
 
     try:
-        # Attempt to connect with a timeout
-        ssh_client.connect(hostname=ip, username=username, password=password, timeout=10)
+        # Attempt to connect to the Windows server via SSH
+        ssh_client.connect(hostname=ip, username=login_username, password=login_password, timeout=10)
         ssh_status = "Login Successful"
 
-        # Command to check if the account is locked.
-        # This command works on many Debian/Ubuntu/CentOS systems.
-        # 'L' in the second field of the output indicates a locked account.
-        command = f"passwd -S {username}"
+        # Windows command to check domain user status
+        command = f"net user {user_to_check} /domain"
         stdin, stdout, stderr = ssh_client.exec_command(command)
         
-        output = stdout.read().decode().strip()
-        error = stderr.read().decode().strip()
+        output = stdout.read().decode('utf-8', errors='ignore').strip()
+        error = stderr.read().decode('utf-8', errors='ignore').strip()
 
-        if error:
+        if "The user name could not be found" in error or "The user name could not be found" in output:
+            account_status = "User Not Found"
+        elif error:
             account_status = f"Check Error: {error}"
-        elif " L " in output.split()[1]:
-            account_status = "Locked"
         else:
-            account_status = "Active"
+            # Search for the "Account active" line to determine status
+            match = re.search(r"Account active\s+(Yes|No)", output, re.IGNORECASE)
+            if match:
+                status = match.group(1).lower()
+                if status == "yes":
+                    account_status = "Active"
+                else:
+                    account_status = "Disabled/Locked"
+            else:
+                account_status = "Status Not Determined"
 
     except paramiko.AuthenticationException:
         ssh_status = "Authentication Failed"
@@ -55,30 +64,31 @@ def check_ssh_and_account_status(ip, username, password):
 
 def main():
     """
-    Main function to read IPs, check status, and print the results table.
+    Main function to read IPs, check status, and print the results to the console.
     """
-    # --- IMPORTANT ---
-    # Avoid hardcoding credentials in production code.
-    # Use SSH keys or a secure vault instead.
-    USERNAME = "your_username"
-    PASSWORD = "your_password"
+    # --- Configuration ---
+    # Credentials to log into the servers.
+    # This user must have permissions to run 'net user /domain'.
+    LOGIN_USERNAME = "your_admin_username"
+    LOGIN_PASSWORD = "your_admin_password"
+    
+    # The specific domain user account you want to check the status of.
+    USER_TO_CHECK = "s-scnservice"
+    
     IP_FILE = "ips.txt"
 
     # Print Markdown table header
-    print("| IP Address      | SSH Credential Status | Account Status      |")
-    print("|-----------------|-----------------------|---------------------|")
+    print(f"Checking status for user: '{USER_TO_CHECK}' on all servers...\n")
+    print("| IP Address      | SSH Credential Status | S-scnservice Status   |")
+    print("|-----------------|-----------------------|-----------------------|")
 
     try:
         with open(IP_FILE, 'r') as file:
-            for ip in file:
-                ip = ip.strip()
-                if ip:
-                    ssh_stat, acc_stat = check_ssh_and_account_status(ip, USERNAME, PASSWORD)
-                    print(f"| {ip:<15} | {ssh_stat:<21} | {acc_stat:<19} |")
-    except FileNotFoundError:
-        print(f"Error: The file '{IP_FILE}' was not found.")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-
-if __name__ == "__main__":
-    main()
+            ips = [line.strip() for line in file if line.strip()]
+        
+        if not ips:
+            print("| No valid IPs found in the file.                                       |")
+            return
+            
+        for ip in ips:
+            ssh_stat, acc_stat = check_windows_account_status(ip, LOGIN_
