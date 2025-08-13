@@ -25,7 +25,7 @@ Sub TrackEmailsFromSubjects()
     Set SentItems = OutlookNS.GetDefaultFolder(5) ' Sent Items
     
     rw = 2 ' Start row
-    Do While Cells(rw, 1).Value <> ""
+    Do While Trim(Cells(rw, 1).Value) <> ""
         SubjectToFind = Trim(Cells(rw, 1).Value)
         Filter = "@SQL=" & Chr(34) & "urn:schemas:mailheader:subject" & Chr(34) & " LIKE '%" & SubjectToFind & "%'"
         
@@ -40,35 +40,43 @@ Sub TrackEmailsFromSubjects()
         ' Count total matches
         AllCount = Items.Count + SentMatches.Count
         
-        ' Find latest email time (Inbox vs Sent)
+        ' Default values
         LastEmailTime = 0
+        Set Mail = Nothing
+        
+        ' Check for latest email from Inbox
         If Items.Count > 0 Then
-            If Items(1).ReceivedTime > LastEmailTime Then LastEmailTime = Items(1).ReceivedTime
+            If Items(1).ReceivedTime > LastEmailTime Then
+                LastEmailTime = Items(1).ReceivedTime
+                Set Mail = Items(1)
+            End If
         End If
+        
+        ' Check for latest email from Sent
         If SentMatches.Count > 0 Then
-            If SentMatches(1).SentOn > LastEmailTime Then LastEmailTime = SentMatches(1).SentOn
+            If SentMatches(1).SentOn > LastEmailTime Then
+                LastEmailTime = SentMatches(1).SentOn
+                Set Mail = SentMatches(1)
+            End If
         End If
         
-        ' Pick most recent email for details
-        If Items.Count > 0 And (SentMatches.Count = 0 Or Items(1).ReceivedTime >= SentMatches(1).SentOn) Then
-            Set Mail = Items(1)
-        ElseIf SentMatches.Count > 0 Then
-            Set Mail = SentMatches(1)
-        Else
-            Set Mail = Nothing
-        End If
-        
+        ' Write results
         If Not Mail Is Nothing Then
             Cells(rw, 2).Value = Mail.SenderName
-            Cells(rw, 3).Value = Mail.Recipients(1).Name
+            If Mail.Recipients.Count > 0 Then
+                Cells(rw, 3).Value = Mail.Recipients(1).Name
+            Else
+                Cells(rw, 3).Value = ""
+            End If
             Cells(rw, 4).Value = Left(Mail.Body, 200) & "..."
             Cells(rw, 5).Value = IIf(Mail.Attachments.Count > 0, "Yes", "No")
-            LastResponder = Mail.SenderName
-            Cells(rw, 6).Value = LastResponder
+            Cells(rw, 6).Value = Mail.SenderName
             Cells(rw, 7).Value = LastEmailTime
             Cells(rw, 8).Value = AllCount
         Else
             Cells(rw, 2).Value = "Not Found"
+            Cells(rw, 7).Value = ""
+            Cells(rw, 8).Value = 0
         End If
         
         rw = rw + 1
