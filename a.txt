@@ -1,70 +1,89 @@
-Sub TrackEmailsFromSubjects()
+Sub TrackEmailsBySubjects_MaxSpeed()
     Dim OutlookApp As Object
     Dim OutlookNS As Object
-    Dim Inbox As Object
-    Dim SentItems As Object
-    Dim Mail As Object
-    Dim i As Long, rw As Long
-    Dim SubjectToFind As String
-    Dim Filter As String
-    Dim Items As Object, Item As Object
-    Dim LastResponder As String
+    Dim Inbox As Object, SentItems As Object
+    Dim Items As Object
+    Dim ws As Worksheet
+    Dim lastRow As Long, i As Long
+    Dim subjFilter As String
+    Dim dateLimit As String
+    Dim filter As String
+    Dim latestSender As String, latestTo As String, latestBody As String, attachStatus As String
+    Dim latestTime As Date
+    Dim totalCount As Long
     
-    ' Create Outlook object
+    ' === Excel Setup ===
+    Set ws = ThisWorkbook.Sheets("EmailTracker")
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    
+    ' === Outlook Setup ===
     On Error Resume Next
-    Set OutlookApp = GetObject(, "Outlook.Application")
-    If OutlookApp Is Nothing Then
-        Set OutlookApp = CreateObject("Outlook.Application")
-    End If
+    Set OutlookApp = GetObject("", "Outlook.Application")
+    If OutlookApp Is Nothing Then Set OutlookApp = CreateObject("Outlook.Application")
     On Error GoTo 0
     
     Set OutlookNS = OutlookApp.GetNamespace("MAPI")
-    Set Inbox = OutlookNS.GetDefaultFolder(6) ' 6 = Inbox
-    Set SentItems = OutlookNS.GetDefaultFolder(5) ' 5 = Sent Items
+    Set Inbox = OutlookNS.GetDefaultFolder(6) ' Inbox
+    Set SentItems = OutlookNS.GetDefaultFolder(5) ' Sent Items
     
-    ' Loop through Excel rows
-    rw = 2 ' start row
-    Do While Cells(rw, 1).Value <> ""
-        SubjectToFind = Trim(Cells(rw, 1).Value)
-        Filter = "@SQL=" & Chr(34) & "urn:schemas:mailheader:subject" & Chr(34) & " LIKE '%" & SubjectToFind & "%'"
-        
-        ' Search in Inbox
-        Set Items = Inbox.Items.Restrict(Filter)
-        Items.Sort "[ReceivedTime]", True
-        
-        If Items.Count = 0 Then
-            ' If not found in Inbox, check Sent Items
-            Set Items = SentItems.Items.Restrict(Filter)
-            Items.Sort "[SentOn]", True
-        End If
-        
-        If Items.Count > 0 Then
-            Set Mail = Items(1) ' Most recent
+    ' === Date Limit for Speed ===
+    dateLimit = Format(Date - 90, "ddddd h:nn") ' last 90 days
+    
+    ' === Loop Through Subjects ===
+    For i = 2 To lastRow
+        subjFilter = Trim(ws.Cells(i, 1).Value)
+        If subjFilter <> "" Then
+            totalCount = 0
+            latestTime = 0
+            latestSender = ""
+            latestTo = ""
+            latestBody = ""
+            attachStatus = ""
             
-            ' Sender
-            On Error Resume Next
-            Cells(rw, 2).Value = Mail.SenderName
-            Cells(rw, 3).Value = Mail.Recipients(1).Name
-            
-            ' Body
-            Cells(rw, 4).Value = Left(Mail.Body, 200) & "..."
-            
-            ' Attachments
-            If Mail.Attachments.Count > 0 Then
-                Cells(rw, 5).Value = "Yes"
-            Else
-                Cells(rw, 5).Value = "No"
+            ' ====== Search Inbox ======
+            filter = "[ReceivedTime] >= '" & dateLimit & "' AND [Subject] Like '*" & subjFilter & "*'"
+            Set Items = Inbox.Items.Restrict(filter)
+            Items.SetColumns ("Subject, ReceivedTime, SenderName, To, Attachments, Body")
+            Items.Sort "[ReceivedTime]", True
+            totalCount = totalCount + Items.Count
+            If Items.Count > 0 Then
+                With Items.Item(1)
+                    latestTime = .ReceivedTime
+                    latestSender = .SenderName
+                    latestTo = .To
+                    latestBody = Left(.Body, 80)
+                    attachStatus = IIf(.Attachments.Count > 0, "Yes", "No")
+                End With
             End If
             
-            ' Last Responder
-            LastResponder = Mail.SenderName
-            Cells(rw, 6).Value = LastResponder
-        Else
-            Cells(rw, 2).Value = "Not Found"
+            ' ====== Search Sent Items ======
+            filter = "[SentOn] >= '" & dateLimit & "' AND [Subject] Like '*" & subjFilter & "*'"
+            Set Items = SentItems.Items.Restrict(filter)
+            Items.SetColumns ("Subject, SentOn, SenderName, To, Attachments, Body")
+            Items.Sort "[SentOn]", True
+            totalCount = totalCount + Items.Count
+            If Items.Count > 0 Then
+                If Items.Item(1).SentOn > latestTime Then
+                    With Items.Item(1)
+                        latestTime = .SentOn
+                        latestSender = .SenderName
+                        latestTo = .To
+                        latestBody = Left(.Body, 80)
+                        attachStatus = IIf(.Attachments.Count > 0, "Yes", "No")
+                    End With
+                End If
+            End If
+            
+            ' === Write results to Excel ===
+            ws.Cells(i, 2).Value = latestSender
+            ws.Cells(i, 3).Value = latestTo
+            ws.Cells(i, 4).Value = latestBody
+            ws.Cells(i, 5).Value = attachStatus
+            ws.Cells(i, 6).Value = latestSender
+            If latestTime <> 0 Then ws.Cells(i, 7).Value = latestTime
+            ws.Cells(i, 8).Value = totalCount
         End If
-        
-        rw = rw + 1
-    Loop
+    Next i
     
-    MsgBox "Email tracking completed!", vbInformation
+    MsgBox "Ultra-fast tracking completed!", vbInformation
 End Sub
