@@ -1,16 +1,95 @@
-
-Discussion Points & Key Takeaways
-
-1. Network Segmentation 
-	•	The team discussed implementing network segmentation to ensure clear demarcation between different network zones.
-	•	Limiting access to specific users based on network segmentation.
-	•	Discussion on WiFi Pentesting Apporoch.
-
-2. DB Assessment
-	•	Scripts & Pre-Requisite will shared by KPMG for database configurations review.
-
-3. AD Pentesting Cloud Security
-	•	Purple software will be installed in Rehans Machine
-
-4. Ratings Middleware Endpoints Scans
-	•	650 endpoints were in scope, scanning has been initated parallel.
+Sub TrackEmailsFromSubjects_Fast()
+    Dim OutlookApp As Object
+    Dim OutlookNS As Object
+    Dim Inbox As Object, SentItems As Object
+    Dim rw As Long
+    Dim SubjectToFind As String
+    Dim Items As Object, SentMatches As Object
+    Dim itm As Object
+    Dim AllCount As Long
+    Dim LastEmailTime As Date
+    Dim Mail As Object
+    Dim DateFilter As String
+    Dim DaysBack As Long
+    
+    ' How many days back to search (speed control)
+    DaysBack = 90 ' change this if needed
+    
+    ' Create Outlook object
+    On Error Resume Next
+    Set OutlookApp = GetObject(, "Outlook.Application")
+    If OutlookApp Is Nothing Then
+        Set OutlookApp = CreateObject("Outlook.Application")
+    End If
+    On Error GoTo 0
+    
+    Set OutlookNS = OutlookApp.GetNamespace("MAPI")
+    Set Inbox = OutlookNS.GetDefaultFolder(6) ' Inbox
+    Set SentItems = OutlookNS.GetDefaultFolder(5) ' Sent Items
+    
+    ' Date filter in Restrict format
+    DateFilter = "[ReceivedTime] >= '" & Format(Now - DaysBack, "ddddd hh:mm") & "'"
+    
+    rw = 2 ' Start row
+    Do While Trim(Cells(rw, 1).Value) <> ""
+        SubjectToFind = LCase(Trim(Cells(rw, 1).Value))
+        
+        AllCount = 0
+        LastEmailTime = 0
+        Set Mail = Nothing
+        
+        ' Search Inbox (date restricted)
+        Set Items = Inbox.Items.Restrict(DateFilter)
+        Items.Sort "[ReceivedTime]", True
+        For Each itm In Items
+            If itm.Class = 43 Then ' MailItem only
+                If InStr(1, LCase(itm.Subject), SubjectToFind) > 0 Then
+                    AllCount = AllCount + 1
+                    If itm.ReceivedTime > LastEmailTime Then
+                        LastEmailTime = itm.ReceivedTime
+                        Set Mail = itm
+                    End If
+                End If
+            End If
+        Next itm
+        
+        ' Search Sent Items (date restricted)
+        DateFilter = "[SentOn] >= '" & Format(Now - DaysBack, "ddddd hh:mm") & "'"
+        Set SentMatches = SentItems.Items.Restrict(DateFilter)
+        SentMatches.Sort "[SentOn]", True
+        For Each itm In SentMatches
+            If itm.Class = 43 Then ' MailItem only
+                If InStr(1, LCase(itm.Subject), SubjectToFind) > 0 Then
+                    AllCount = AllCount + 1
+                    If itm.SentOn > LastEmailTime Then
+                        LastEmailTime = itm.SentOn
+                        Set Mail = itm
+                    End If
+                End If
+            End If
+        Next itm
+        
+        ' Output results
+        If Not Mail Is Nothing Then
+            Cells(rw, 2).Value = Mail.SenderName
+            If Mail.Recipients.Count > 0 Then
+                Cells(rw, 3).Value = Mail.Recipients(1).Name
+            Else
+                Cells(rw, 3).Value = ""
+            End If
+            Cells(rw, 4).Value = Left(Mail.Body, 200) & "..."
+            Cells(rw, 5).Value = IIf(Mail.Attachments.Count > 0, "Yes", "No")
+            Cells(rw, 6).Value = Mail.SenderName
+            Cells(rw, 7).Value = LastEmailTime
+            Cells(rw, 8).Value = AllCount
+        Else
+            Cells(rw, 2).Value = "Not Found"
+            Cells(rw, 7).Value = ""
+            Cells(rw, 8).Value = 0
+        End If
+        
+        rw = rw + 1
+    Loop
+    
+    MsgBox "Fast email tracking completed!", vbInformation
+End Sub
