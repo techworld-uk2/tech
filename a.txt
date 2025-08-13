@@ -1,106 +1,70 @@
-import paramiko
-import socket
-import re
-
-def check_windows_account_status(ip, login_username, login_password, user_to_check):
-    """
-    Attempts to SSH into a given Windows IP and checks a domain user's account status.
-
-    Args:
-        ip (str): The IP address of the target Windows machine.
-        login_username (str): The username for SSH login.
-        login_password (str): The password for the SSH login user.
-        user_to_check (str): The domain username whose status needs to be checked.
-
-    Returns:
-        tuple: A tuple containing SSH status and Account status.
-    """
-    ssh_client = paramiko.SSHClient()
-    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-    ssh_status = ""
-    account_status = "N/A"
-
-    try:
-        # Attempt to connect to the Windows server via SSH
-        ssh_client.connect(hostname=ip, username=login_username, password=login_password, timeout=10)
-        ssh_status = "Login Successful"
-
-        # Windows command to check domain user status
-        command = f"net user {user_to_check} /domain"
-        stdin, stdout, stderr = ssh_client.exec_command(command)
-        
-        output = stdout.read().decode('utf-8', errors='ignore').strip()
-        error = stderr.read().decode('utf-8', errors='ignore').strip()
-
-        if "The user name could not be found" in error or "The user name could not be found" in output:
-            account_status = "User Not Found"
-        elif error:
-            account_status = f"Check Error: {error}"
-        else:
-            # Search for the "Account active" line to determine status
-            match = re.search(r"Account active\s+(Yes|No)", output, re.IGNORECASE)
-            if match:
-                status = match.group(1).lower()
-                if status == "yes":
-                    account_status = "Active"
-                else:
-                    account_status = "Disabled/Locked"
-            else:
-                account_status = "Status Not Determined"
-
-    except paramiko.AuthenticationException:
-        ssh_status = "Authentication Failed"
-    except socket.timeout:
-        ssh_status = "Connection Timed Out"
-    except paramiko.SSHException as e:
-        ssh_status = f"SSH Error: {e}"
-    except Exception as e:
-        ssh_status = f"Error: {e}"
-    finally:
-        ssh_client.close()
-
-    return ssh_status, account_status
-
-def main():
-    """
-    Main function to read IPs, check status, and print the results to the console.
-    """
-    # --- Configuration ---
-    # Credentials to log into the servers.
-    # This user must have permissions to run 'net user /domain'.
-    LOGIN_USERNAME = "your_admin_username"
-    LOGIN_PASSWORD = "your_admin_password"
+Sub TrackEmailsFromSubjects()
+    Dim OutlookApp As Object
+    Dim OutlookNS As Object
+    Dim Inbox As Object
+    Dim SentItems As Object
+    Dim Mail As Object
+    Dim i As Long, rw As Long
+    Dim SubjectToFind As String
+    Dim Filter As String
+    Dim Items As Object, Item As Object
+    Dim LastResponder As String
     
-    # The specific domain user account you want to check the status of.
-    USER_TO_CHECK = "s-scnservice"
+    ' Create Outlook object
+    On Error Resume Next
+    Set OutlookApp = GetObject(, "Outlook.Application")
+    If OutlookApp Is Nothing Then
+        Set OutlookApp = CreateObject("Outlook.Application")
+    End If
+    On Error GoTo 0
     
-    IP_FILE = "ips.txt"
-
-    # Print Markdown table header
-    print(f"Checking status for user: '{USER_TO_CHECK}' on all servers...\n")
-    print("| IP Address      | SSH Credential Status | S-scnservice Status   |")
-    print("|-----------------|-----------------------|-----------------------|")
-
-    try:
-        with open(IP_FILE, 'r') as file:
-            ips = [line.strip() for line in file if line.strip()]
+    Set OutlookNS = OutlookApp.GetNamespace("MAPI")
+    Set Inbox = OutlookNS.GetDefaultFolder(6) ' 6 = Inbox
+    Set SentItems = OutlookNS.GetDefaultFolder(5) ' 5 = Sent Items
+    
+    ' Loop through Excel rows
+    rw = 2 ' start row
+    Do While Cells(rw, 1).Value <> ""
+        SubjectToFind = Trim(Cells(rw, 1).Value)
+        Filter = "@SQL=" & Chr(34) & "urn:schemas:mailheader:subject" & Chr(34) & " LIKE '%" & SubjectToFind & "%'"
         
-        if not ips:
-            print("| No valid IPs found in the file.                                       |")
-            return
+        ' Search in Inbox
+        Set Items = Inbox.Items.Restrict(Filter)
+        Items.Sort "[ReceivedTime]", True
+        
+        If Items.Count = 0 Then
+            ' If not found in Inbox, check Sent Items
+            Set Items = SentItems.Items.Restrict(Filter)
+            Items.Sort "[SentOn]", True
+        End If
+        
+        If Items.Count > 0 Then
+            Set Mail = Items(1) ' Most recent
             
-        for ip in ips:
-            ssh_stat, acc_stat = check_windows_account_status(ip, LOGIN_USERNAME, LOGIN_PASSWORD, USER_TO_CHECK)
-            # Print the formatted table row
-            print(f"| {ip:<15} | {ssh_stat:<21} | {acc_stat:<21} |")
+            ' Sender
+            On Error Resume Next
+            Cells(rw, 2).Value = Mail.SenderName
+            Cells(rw, 3).Value = Mail.Recipients(1).Name
+            
+            ' Body
+            Cells(rw, 4).Value = Left(Mail.Body, 200) & "..."
+            
+            ' Attachments
+            If Mail.Attachments.Count > 0 Then
+                Cells(rw, 5).Value = "Yes"
+            Else
+                Cells(rw, 5).Value = "No"
+            End If
+            
+            ' Last Responder
+            LastResponder = Mail.SenderName
+            Cells(rw, 6).Value = LastResponder
+        Else
+            Cells(rw, 2).Value = "Not Found"
+        End If
         
-        print("\nProcessing complete.")
-
-    except FileNotFoundError:
-        print(f"\nError: The file '{IP_FILE}' was not found.")
-    except Exception as e:
-        print(f"\nAn unexpected error occurred: {e}")
-
-if __name__ == "__main__":
-    main()
+        rw = rw + 1
+    Loop
+    
+    MsgBox "Email tracking completed!", vbInformation
+End Sub
