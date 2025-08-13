@@ -1,15 +1,14 @@
-Sub TrackEmailsWithLastResponder()
+Sub TrackEmailsFromSubjects()
     Dim OutlookApp As Object
     Dim OutlookNS As Object
-    Dim Inbox As Object, SentItems As Object
-    Dim Mail As Object, Item As Object
-    Dim rw As Long
+    Dim Inbox As Object
+    Dim SentItems As Object
+    Dim Mail As Object
+    Dim i As Long, rw As Long
     Dim SubjectToFind As String
     Dim Filter As String
-    Dim Items As Object
-    Dim Conv As Object, ConvItems As Object
-    Dim LastResponder As String, LastReplyTime As Date
-    Dim i As Long
+    Dim Items As Object, Item As Object
+    Dim LastResponder As String
     
     ' Create Outlook object
     On Error Resume Next
@@ -20,55 +19,46 @@ Sub TrackEmailsWithLastResponder()
     On Error GoTo 0
     
     Set OutlookNS = OutlookApp.GetNamespace("MAPI")
-    Set Inbox = OutlookNS.GetDefaultFolder(6) ' Inbox
-    Set SentItems = OutlookNS.GetDefaultFolder(5) ' Sent Items
+    Set Inbox = OutlookNS.GetDefaultFolder(6) ' 6 = Inbox
+    Set SentItems = OutlookNS.GetDefaultFolder(5) ' 5 = Sent Items
     
-    rw = 2 ' Start row in Excel
-    Do While Trim(Cells(rw, 1).Value) <> ""
-        
+    ' Loop through Excel rows
+    rw = 2 ' start row
+    Do While Cells(rw, 1).Value <> ""
         SubjectToFind = Trim(Cells(rw, 1).Value)
         Filter = "@SQL=" & Chr(34) & "urn:schemas:mailheader:subject" & Chr(34) & " LIKE '%" & SubjectToFind & "%'"
         
-        ' First search Inbox
+        ' Search in Inbox
         Set Items = Inbox.Items.Restrict(Filter)
         Items.Sort "[ReceivedTime]", True
         
         If Items.Count = 0 Then
-            ' If not in Inbox, check Sent Items
+            ' If not found in Inbox, check Sent Items
             Set Items = SentItems.Items.Restrict(Filter)
             Items.Sort "[SentOn]", True
         End If
         
         If Items.Count > 0 Then
-            Set Mail = Items(1) ' Most recent mail for subject
+            Set Mail = Items(1) ' Most recent
             
-            ' Get conversation object
-            If Not Mail Is Nothing Then
-                Set Conv = Mail.GetConversation
-                If Not Conv Is Nothing Then
-                    Set ConvItems = Conv.GetTable
-                    LastResponder = ""
-                    LastReplyTime = #1/1/1900#
-                    
-                    ' Loop through the conversation table
-                    Do Until ConvItems.EndOfTable
-                        Dim Row As Object
-                        Set Row = ConvItems.GetNextRow
-                        If Row("LastModificationTime") > LastReplyTime Then
-                            LastReplyTime = Row("LastModificationTime")
-                            LastResponder = Row("SenderName")
-                        End If
-                    Loop
-                End If
-            End If
-            
-            ' Fill Excel cells
+            ' Sender
+            On Error Resume Next
             Cells(rw, 2).Value = Mail.SenderName
             Cells(rw, 3).Value = Mail.Recipients(1).Name
+            
+            ' Body
             Cells(rw, 4).Value = Left(Mail.Body, 200) & "..."
-            Cells(rw, 5).Value = IIf(Mail.Attachments.Count > 0, "Yes", "No")
+            
+            ' Attachments
+            If Mail.Attachments.Count > 0 Then
+                Cells(rw, 5).Value = "Yes"
+            Else
+                Cells(rw, 5).Value = "No"
+            End If
+            
+            ' Last Responder
+            LastResponder = Mail.SenderName
             Cells(rw, 6).Value = LastResponder
-            Cells(rw, 7).Value = LastReplyTime
         Else
             Cells(rw, 2).Value = "Not Found"
         End If
@@ -76,5 +66,5 @@ Sub TrackEmailsWithLastResponder()
         rw = rw + 1
     Loop
     
-    MsgBox "Tracking complete!", vbInformation
+    MsgBox "Email tracking completed!", vbInformation
 End Sub
