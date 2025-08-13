@@ -1,87 +1,103 @@
-Sub TrackEmailsFromSubjects_Fast()
+Sub TrackEmails_OnePassUltraFast()
     Dim OutlookApp As Object
     Dim OutlookNS As Object
     Dim Inbox As Object, SentItems As Object
-    Dim rw As Long
-    Dim SubjectToFind As String
     Dim Items As Object, SentMatches As Object
     Dim itm As Object
-    Dim AllCount As Long
-    Dim LastEmailTime As Date
-    Dim Mail As Object
-    Dim DateFilter As String
+    Dim rw As Long, i As Long
+    Dim SubjectToFind As String
     Dim DaysBack As Long
+    Dim DateFilterInbox As String, DateFilterSent As String
     
-    ' How many days back to search (speed control)
-    DaysBack = 90 ' change this if needed
+    Dim EmailData As Collection
+    Dim RecDate As Date, Sender As String, Receiver As String, BodyText As String, HasAttach As String, SubjectText As String, IsSent As Boolean
+    
+    ' How many days back to search
+    DaysBack = 90 ' adjust for your need
     
     ' Create Outlook object
     On Error Resume Next
     Set OutlookApp = GetObject(, "Outlook.Application")
-    If OutlookApp Is Nothing Then
-        Set OutlookApp = CreateObject("Outlook.Application")
-    End If
+    If OutlookApp Is Nothing Then Set OutlookApp = CreateObject("Outlook.Application")
     On Error GoTo 0
     
     Set OutlookNS = OutlookApp.GetNamespace("MAPI")
     Set Inbox = OutlookNS.GetDefaultFolder(6) ' Inbox
     Set SentItems = OutlookNS.GetDefaultFolder(5) ' Sent Items
     
-    ' Date filter in Restrict format
-    DateFilter = "[ReceivedTime] >= '" & Format(Now - DaysBack, "ddddd hh:mm") & "'"
+    ' Restrict filters for speed
+    DateFilterInbox = "[ReceivedTime] >= '" & Format(Now - DaysBack, "ddddd hh:mm") & "'"
+    DateFilterSent = "[SentOn] >= '" & Format(Now - DaysBack, "ddddd hh:mm") & "'"
     
-    rw = 2 ' Start row
+    ' Store all matching emails from Inbox
+    Set EmailData = New Collection
+    Set Items = Inbox.Items.Restrict(DateFilterInbox)
+    Items.Sort "[ReceivedTime]", True
+    For Each itm In Items
+        If itm.Class = 43 Then
+            SubjectText = LCase(itm.Subject)
+            RecDate = itm.ReceivedTime
+            Sender = itm.SenderName
+            If itm.Recipients.Count > 0 Then Receiver = itm.Recipients(1).Name Else Receiver = ""
+            BodyText = Left(itm.Body, 200) & "..."
+            HasAttach = IIf(itm.Attachments.Count > 0, "Yes", "No")
+            EmailData.Add Array(SubjectText, Sender, Receiver, BodyText, HasAttach, RecDate)
+        End If
+    Next itm
+    
+    ' Store all matching emails from Sent
+    Set SentMatches = SentItems.Items.Restrict(DateFilterSent)
+    SentMatches.Sort "[SentOn]", True
+    For Each itm In SentMatches
+        If itm.Class = 43 Then
+            SubjectText = LCase(itm.Subject)
+            RecDate = itm.SentOn
+            Sender = itm.SenderName
+            If itm.Recipients.Count > 0 Then Receiver = itm.Recipients(1).Name Else Receiver = ""
+            BodyText = Left(itm.Body, 200) & "..."
+            HasAttach = IIf(itm.Attachments.Count > 0, "Yes", "No")
+            EmailData.Add Array(SubjectText, Sender, Receiver, BodyText, HasAttach, RecDate)
+        End If
+    Next itm
+    
+    ' Now loop through Excel subjects & find matches in memory
+    rw = 2
     Do While Trim(Cells(rw, 1).Value) <> ""
         SubjectToFind = LCase(Trim(Cells(rw, 1).Value))
         
-        AllCount = 0
+        Dim LastEmailTime As Date
+        Dim LastSender As String
+        Dim LastReceiver As String
+        Dim LastBody As String
+        Dim LastAttach As String
+        Dim MatchCount As Long
+        
         LastEmailTime = 0
-        Set Mail = Nothing
+        MatchCount = 0
         
-        ' Search Inbox (date restricted)
-        Set Items = Inbox.Items.Restrict(DateFilter)
-        Items.Sort "[ReceivedTime]", True
-        For Each itm In Items
-            If itm.Class = 43 Then ' MailItem only
-                If InStr(1, LCase(itm.Subject), SubjectToFind) > 0 Then
-                    AllCount = AllCount + 1
-                    If itm.ReceivedTime > LastEmailTime Then
-                        LastEmailTime = itm.ReceivedTime
-                        Set Mail = itm
-                    End If
+        ' Search from collection
+        For i = 1 To EmailData.Count
+            If InStr(1, EmailData(i)(0), SubjectToFind) > 0 Then
+                MatchCount = MatchCount + 1
+                If EmailData(i)(5) > LastEmailTime Then
+                    LastEmailTime = EmailData(i)(5)
+                    LastSender = EmailData(i)(1)
+                    LastReceiver = EmailData(i)(2)
+                    LastBody = EmailData(i)(3)
+                    LastAttach = EmailData(i)(4)
                 End If
             End If
-        Next itm
-        
-        ' Search Sent Items (date restricted)
-        DateFilter = "[SentOn] >= '" & Format(Now - DaysBack, "ddddd hh:mm") & "'"
-        Set SentMatches = SentItems.Items.Restrict(DateFilter)
-        SentMatches.Sort "[SentOn]", True
-        For Each itm In SentMatches
-            If itm.Class = 43 Then ' MailItem only
-                If InStr(1, LCase(itm.Subject), SubjectToFind) > 0 Then
-                    AllCount = AllCount + 1
-                    If itm.SentOn > LastEmailTime Then
-                        LastEmailTime = itm.SentOn
-                        Set Mail = itm
-                    End If
-                End If
-            End If
-        Next itm
+        Next i
         
         ' Output results
-        If Not Mail Is Nothing Then
-            Cells(rw, 2).Value = Mail.SenderName
-            If Mail.Recipients.Count > 0 Then
-                Cells(rw, 3).Value = Mail.Recipients(1).Name
-            Else
-                Cells(rw, 3).Value = ""
-            End If
-            Cells(rw, 4).Value = Left(Mail.Body, 200) & "..."
-            Cells(rw, 5).Value = IIf(Mail.Attachments.Count > 0, "Yes", "No")
-            Cells(rw, 6).Value = Mail.SenderName
+        If MatchCount > 0 Then
+            Cells(rw, 2).Value = LastSender
+            Cells(rw, 3).Value = LastReceiver
+            Cells(rw, 4).Value = LastBody
+            Cells(rw, 5).Value = LastAttach
+            Cells(rw, 6).Value = LastSender
             Cells(rw, 7).Value = LastEmailTime
-            Cells(rw, 8).Value = AllCount
+            Cells(rw, 8).Value = MatchCount
         Else
             Cells(rw, 2).Value = "Not Found"
             Cells(rw, 7).Value = ""
@@ -91,5 +107,5 @@ Sub TrackEmailsFromSubjects_Fast()
         rw = rw + 1
     Loop
     
-    MsgBox "Fast email tracking completed!", vbInformation
+    MsgBox "Ultra-fast email tracking completed!", vbInformation
 End Sub
