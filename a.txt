@@ -1,89 +1,41 @@
-Sub TrackEmailsBySubjects_MaxSpeed()
-    Dim OutlookApp As Object
-    Dim OutlookNS As Object
-    Dim Inbox As Object, SentItems As Object
-    Dim Items As Object
-    Dim ws As Worksheet
-    Dim lastRow As Long, i As Long
-    Dim subjFilter As String
-    Dim dateLimit As String
-    Dim filter As String
-    Dim latestSender As String, latestTo As String, latestBody As String, attachStatus As String
-    Dim latestTime As Date
-    Dim totalCount As Long
-    
-    ' === Excel Setup ===
-    Set ws = ThisWorkbook.Sheets("EmailTracker")
-    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
-    
-    ' === Outlook Setup ===
-    On Error Resume Next
-    Set OutlookApp = GetObject("", "Outlook.Application")
-    If OutlookApp Is Nothing Then Set OutlookApp = CreateObject("Outlook.Application")
-    On Error GoTo 0
-    
-    Set OutlookNS = OutlookApp.GetNamespace("MAPI")
-    Set Inbox = OutlookNS.GetDefaultFolder(6) ' Inbox
-    Set SentItems = OutlookNS.GetDefaultFolder(5) ' Sent Items
-    
-    ' === Date Limit for Speed ===
-    dateLimit = Format(Date - 90, "ddddd h:nn") ' last 90 days
-    
-    ' === Loop Through Subjects ===
-    For i = 2 To lastRow
-        subjFilter = Trim(ws.Cells(i, 1).Value)
-        If subjFilter <> "" Then
-            totalCount = 0
-            latestTime = 0
-            latestSender = ""
-            latestTo = ""
-            latestBody = ""
-            attachStatus = ""
-            
-            ' ====== Search Inbox ======
-            filter = "[ReceivedTime] >= '" & dateLimit & "' AND [Subject] Like '*" & subjFilter & "*'"
-            Set Items = Inbox.Items.Restrict(filter)
-            Items.SetColumns ("Subject, ReceivedTime, SenderName, To, Attachments, Body")
-            Items.Sort "[ReceivedTime]", True
-            totalCount = totalCount + Items.Count
-            If Items.Count > 0 Then
-                With Items.Item(1)
-                    latestTime = .ReceivedTime
-                    latestSender = .SenderName
-                    latestTo = .To
-                    latestBody = Left(.Body, 80)
-                    attachStatus = IIf(.Attachments.Count > 0, "Yes", "No")
-                End With
-            End If
-            
-            ' ====== Search Sent Items ======
-            filter = "[SentOn] >= '" & dateLimit & "' AND [Subject] Like '*" & subjFilter & "*'"
-            Set Items = SentItems.Items.Restrict(filter)
-            Items.SetColumns ("Subject, SentOn, SenderName, To, Attachments, Body")
-            Items.Sort "[SentOn]", True
-            totalCount = totalCount + Items.Count
-            If Items.Count > 0 Then
-                If Items.Item(1).SentOn > latestTime Then
-                    With Items.Item(1)
-                        latestTime = .SentOn
-                        latestSender = .SenderName
-                        latestTo = .To
-                        latestBody = Left(.Body, 80)
-                        attachStatus = IIf(.Attachments.Count > 0, "Yes", "No")
-                    End With
-                End If
-            End If
-            
-            ' === Write results to Excel ===
-            ws.Cells(i, 2).Value = latestSender
-            ws.Cells(i, 3).Value = latestTo
-            ws.Cells(i, 4).Value = latestBody
-            ws.Cells(i, 5).Value = attachStatus
-            ws.Cells(i, 6).Value = latestSender
-            If latestTime <> 0 Then ws.Cells(i, 7).Value = latestTime
-            ws.Cells(i, 8).Value = totalCount
-        End If
-    Next i
-    
-    MsgBox "Ultra-fast tracking completed!", vbInformation
-End Sub
+Subject: Request: WiFi Penetration Testing - Mumbai | Chennai Location
+
+Dear Network Support Team,
+
+We are planning to conduct a comprehensive WiFi penetration test at our Mumbai and Chennai office locations.
+
+Proposed Timeline:
+We are looking to schedule this assessment and would like to coordinate with your team to find a suitable window, ideally within the next 2 weeks.
+We anticipate the testing will take approximately 5 days per location.
+
+Pre-requisite Requirements from Network Support:
+
+To ensure the testing is conducted efficiently and safely, we require the following from your team before we begin:
+
+Formal Authorization: Written approval (email is fine) from network owners acknowledging and authorizing this testing.
+
+Network Information (for both locations):
+
+A list of all SSIDs currently in scope (e.g., Corporate_WiFi, Guest_WiFi, etc.).
+
+The authentication methods used for each SSID (e.g., WPA2-PSK, 802.1x RADIUS, Captive Portal).
+
+Up-to-date wireless network diagrams.
+
+IP address ranges used by the wireless clients on each SSID.
+
+Points of Contact:
+
+Primary and secondary technical contacts at both the Mumbai and Chennai locations who can be reached during the testing.
+
+An emergency contact for after-hours, in the event of any unexpected service disruption.
+
+System Whitelisting:
+
+We will provide the source IP addresses and/or MAC addresses of our testing equipment. Please ensure these are whitelisted in any Wireless Intrusion Prevention Systems (WIPS) or other monitoring tools to avoid blocking our legitimate test traffic.
+
+Test Accounts (if applicable):
+
+For testing authenticated networks (like the corporate SSID), we will require temporary, non-privileged user credentials.
+
+Could we please schedule a brief 30-minute call next week to discuss these pre-requisites, finalize the scope, and agree on a testing schedule that minimizes any potential disruption to business operations?
