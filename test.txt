@@ -1,1 +1,0 @@
-The testing team ran Active Directory commands to extract schema information, stored it in a local text file, and successfully copied it into a GitHub file. This process was completed without triggering any security alerts.
