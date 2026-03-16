@@ -1,59 +1,25 @@
-Dim AppData As Object
-Const ROOT_PATH As String = "C:\Users\%USERNAME%\OneDrive\VAPT"
+Review IAM users, groups, and roles for permissions that can be abused to gain higher privileges, such as:
 
-Function GetRootPath() As String
-    GetRootPath = Replace(ROOT_PATH, "%USERNAME%", Environ("USERNAME"))
-End Function
+iam:CreatePolicyVersion
 
-Sub LoadOneDriveFiles()
-    Dim rootPath As String
-    rootPath = GetRootPath()
+iam:SetDefaultPolicyVersion
 
-    Set AppData = CreateObject("Scripting.Dictionary")
-    Sheets("CONTROL").Range("B2:B1000").ClearContents
+iam:AttachUserPolicy
 
-    ScanFolder rootPath
-    MsgBox "OneDrive files loaded"
-End Sub
+iam:AttachGroupPolicy
 
-Sub ScanFolder(folderPath As String)
-    Dim fso As Object, folder As Object, subFolder As Object, file As Object
-    Dim wb As Workbook, ws As Worksheet
-    Dim lastRow As Long, r As Long, key As String
+iam:AttachRolePolicy
 
-    Set fso = CreateObject("Scripting.FileSystemObject")
-    Set folder = fso.GetFolder(folderPath)
+iam:PutUserPolicy
 
-    For Each file In folder.Files
-        If file.Name Like "*.xlsx" Or file.Name Like "*.xlsm" Then
+iam:PutGroupPolicy
 
-            AddFileToDropdown file.Name
+iam:PutRolePolicy
 
-            Set wb = Workbooks.Open(file.Path, False, True)
-            Set ws = wb.Sheets(1)
+iam:PassRole
 
-            lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+iam:CreateAccessKey
 
-            For r = 2 To lastRow
-                key = file.Name & "|" & ws.Cells(r, 1).Value
-                AppData(key) = ws.Rows(r).Value
-            Next
+sts:AssumeRole
 
-            wb.Close False
-        End If
-    Next
-
-    For Each subFolder In folder.SubFolders
-        ScanFolder subFolder.Path
-    Next
-End Sub
-
-Sub AddFileToDropdown(fileName As String)
-    Dim i As Long
-    For i = 2 To 1000
-        If Sheets("CONTROL").Cells(i, 2).Value = "" Then
-            Sheets("CONTROL").Cells(i, 2).Value = fileName
-            Exit Sub
-        End If
-    Next
-End Sub
+Remove or tightly restrict these permissions unless explicitly required for an approved admin role. Enforce least privilege and avoid attaching broad administrative permissions, especially wildcard actions like *:*, because they can enable direct or indirect privilege escalation. CIS explicitly recommends ensuring IAM policies with full administrative *:* privileges are not attached
